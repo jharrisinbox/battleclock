@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BattleClock v0.4</title>
+<style>
+:root{--bg:#15171a;--panel:#24282d;--panel2:#1c1f23;--text:#f3f4f6;--muted:#aeb4bd;--border:#444b55;--run:#43d17a;--danger:#ff5c5c}
+*{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px 22px;border-bottom:1px solid var(--border);background:var(--panel2)}
+h1{font-size:22px;margin:0}.sub{color:var(--muted);font-size:13px;margin-top:4px}button,input{font:inherit}
+button{border:1px solid var(--border);background:#343a42;color:var(--text);border-radius:10px;padding:11px 14px;cursor:pointer;font-weight:700}
+button:hover{filter:brightness(1.12)}button:active{transform:translateY(1px)}.primary{background:#315d43}.danger{background:#663333}
+.header-buttons{display:flex;gap:8px;flex-wrap:wrap} main{padding:20px;max-width:1500px;margin:auto}
+#players{display:grid;grid-template-columns:repeat(2,minmax(300px,1fr));gap:18px}
+.timer{position:relative;background:var(--panel);border:3px solid var(--border);border-radius:18px;padding:18px;transition:border-color .15s,box-shadow .15s}
+.timer.zero{border-color:var(--danger)}.timer-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.identity{display:flex;align-items:center;gap:9px;min-width:0;flex:1}.name{font-size:22px;font-weight:800;color:var(--text);min-width:0;flex:1;padding:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.color-picker{width:34px;height:34px;padding:2px;border-radius:8px;background:#15171a;border:1px solid var(--border);cursor:pointer;flex:0 0 auto}
+.status{font-size:14px;font-weight:900;letter-spacing:.08em;color:var(--muted)}.zero .status{color:var(--danger)}
+.clock{display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums;font-size:clamp(64px,9vw,120px);font-weight:900;line-height:1;margin:22px 0;padding:18px 8px;background:#101214;border-radius:14px;cursor:pointer;user-select:none}
+.controls{display:grid;grid-template-columns:repeat(4,1fr) 1.45fr repeat(4,1fr);gap:7px}.adjust{font-size:14px;padding:10px 7px}.toggle{font-size:17px}.timer:not(.primary-timer) .controls{grid-template-columns:1fr 1fr 1.35fr 1fr 1fr}.timer:not(.primary-timer) .adjust{font-size:15px}
+.secondary{display:flex;justify-content:center;gap:8px;margin-top:12px;flex-wrap:wrap}.secondary button{font-size:12px;padding:8px 10px;color:#d8dbe0}
+.custom-title{display:flex;justify-content:space-between;align-items:center;margin:30px 0 12px;padding-top:20px;border-top:1px solid var(--border)}
+.custom-title h2{margin:0;font-size:19px}
+#entities{display:grid;grid-template-columns:repeat(2,minmax(320px,1fr));gap:14px}
+.entity-card{background:var(--panel);border:2px solid var(--border);border-radius:16px;padding:15px;min-width:0}
+.entity-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
+.entity-title{font-size:20px;font-weight:900}.entity-type{font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin-top:3px}
+.entity-tools{display:flex;gap:6px;flex-wrap:wrap}.entity-tools button{font-size:11px;padding:7px 9px}
+.component-list{display:grid;gap:9px}.component{background:#171a1e;border:1px solid #3a4048;border-radius:11px;padding:10px}
+.component-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.component-name{font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.component-value{font-size:21px;font-weight:900;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.comp-controls{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.comp-controls button{padding:7px 9px;font-size:12px}
+.resource-track{height:8px;background:#0e1012;border-radius:99px;overflow:hidden;margin-top:7px}.resource-fill{height:100%;background:var(--run)}
+.entity-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;padding-top:11px;border-top:1px solid #ffffff16}.entity-actions button{font-size:12px;padding:8px 10px}
+.action-ref{font-size:11px;color:var(--muted);margin-top:4px;white-space:pre-wrap}
+.builder{width:min(760px,94vw);max-height:90vh;overflow:auto}
+.builder-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.builder select,.builder textarea,.builder input{width:100%;padding:9px;border-radius:8px;border:1px solid var(--border);background:#14171a;color:var(--text)}
+.builder textarea{min-height:65px;resize:vertical}.builder-section{border-top:1px solid var(--border);margin-top:16px;padding-top:14px}
+.builder-row{display:grid;grid-template-columns:1.1fr .8fr .8fr auto;gap:7px;align-items:end;background:#1a1d21;padding:9px;border-radius:9px;margin-top:7px}
+.builder-row.action-row{grid-template-columns:1fr 1fr 1.2fr auto}.builder-row label{margin:0;font-size:11px}.builder-row button{padding:9px}
+.builder-adds{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.builder-adds button{font-size:11px;padding:7px 9px}
+.empty{color:var(--muted);padding:14px 0}.footer-note{text-align:center;color:var(--muted);font-size:12px;margin:28px 0 10px}.event-panel{margin-top:26px;background:var(--panel2);border:1px solid var(--border);border-radius:14px;padding:14px}.event-panel h2{font-size:18px;margin:0}.event-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.event-log{margin-top:10px;max-height:230px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}.event-row{display:grid;grid-template-columns:80px 1fr;gap:10px;padding:6px 2px;border-top:1px solid #ffffff12}.event-row:first-child{border-top:0}.event-time{color:var(--muted)}
+.toast{position:fixed;right:18px;bottom:18px;max-width:390px;padding:12px 16px;border-radius:10px;background:#30363d;border:1px solid var(--border);box-shadow:0 8px 30px #0008;display:none;z-index:10}
+.toast.error{border-color:var(--danger)}
+dialog{background:#24282d;color:var(--text);border:1px solid var(--border);border-radius:14px;padding:22px;min-width:min(420px,90vw)}
+dialog::backdrop{background:rgba(0,0,0,.65)}dialog label{display:block;margin:10px 0 5px;color:var(--muted)}
+dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:#14171a;color:var(--text)}
+.check{display:flex;gap:9px;align-items:center;margin:10px 0;color:var(--text)}.check input{width:18px;height:18px}
+.dialog-buttons{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;flex-wrap:wrap}.hint{font-size:12px;color:var(--muted);line-height:1.4;margin-top:8px}
+@media(max-width:850px){#players,#entities{grid-template-columns:1fr}header{align-items:flex-start;flex-direction:column}.builder-grid{grid-template-columns:1fr}}
+@media(max-width:700px){.controls{grid-template-columns:repeat(4,1fr)}.controls .toggle{grid-column:1/-1;grid-row:1}.builder-row,.builder-row.action-row{grid-template-columns:1fr 1fr}.builder-row button{grid-column:1/-1}}
+
+/* v0.3 compact player clocks + DM dice */
+.primary-timer{padding:12px;border-width:2px}.primary-timer .name{font-size:18px}.primary-timer .color-picker{width:28px;height:28px}.primary-timer .status{font-size:11px}.primary-timer .clock{font-size:clamp(46px,6vw,78px);margin:10px 0;padding:10px 6px}.primary-timer .controls{gap:5px}.primary-timer .controls button{padding:7px 5px;font-size:13px}.primary-timer .secondary{margin-top:7px}.primary-timer .secondary button{padding:5px 8px;font-size:10px}
+.dice-panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px;margin:16px 0}.dice-controls{display:flex;gap:6px;flex-wrap:wrap;align-items:end;margin-top:8px}.dice-controls input{width:65px;padding:7px;border-radius:7px;border:1px solid var(--border);background:#14171a;color:var(--text)}.dice-controls button{padding:7px 10px;font-size:11px}.dice-result{font-weight:800;margin-top:8px;min-height:20px}.action-buttons{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.player-actions{margin-top:9px;padding-top:8px;border-top:1px solid #ffffff16}.player-actions-head{display:flex;justify-content:space-between;align-items:center}.player-action-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:7px}.player-action{background:#171a1e;border:1px solid #3a4048;border-radius:9px;padding:7px}.player-action-name{font-weight:850;font-size:12px}.player-action-ref{font-size:10px;color:var(--muted);margin-top:3px}.player-action button{padding:5px 7px;font-size:10px;margin-top:5px}
+
+/* v0.3.1 */
+.ability-strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:7px 0 2px}
+.ability{background:#171a1e;border:1px solid #3a4048;border-radius:7px;padding:4px 3px;text-align:center;min-width:0}
+.ability b{display:block;font-size:9px;color:var(--muted);letter-spacing:.04em}.ability span{font-size:11px;font-weight:850;white-space:nowrap}
+.stats-edit{font-size:9px!important;padding:4px 6px!important}
+.die-selected{background:#315d43!important;border-color:#63a77c!important;box-shadow:0 0 0 2px #43d17a33}
+#diceRoll{background:#315d43;padding:8px 16px;font-size:12px}
+.dice-expression{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);font-size:12px;margin-top:7px}
+.uses-badge{float:right;color:#d7dde5;background:#30363d;border:1px solid #4b535e;border-radius:999px;padding:1px 6px;font-size:10px;margin-left:5px}
+.info-btn{padding:2px 6px!important;margin:0 0 0 4px!important;border-radius:999px!important;font-size:10px!important;vertical-align:middle}
+.action-tooltip{display:none;position:absolute;z-index:20;left:7px;right:7px;top:32px;background:#0f1114;border:1px solid #555f6b;border-radius:9px;padding:9px;font-size:11px;line-height:1.35;box-shadow:0 8px 24px #000a;white-space:pre-wrap}
+.player-action{position:relative}.player-action.tooltip-open .action-tooltip{display:block}
+.action-footer{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.hidden-panel{margin:12px 0;background:var(--panel2);border:1px dashed var(--border);border-radius:12px;padding:10px}
+.hidden-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}.hidden-chip{display:flex;gap:5px;align-items:center;background:#171a1e;border:1px solid #3a4048;border-radius:9px;padding:5px 7px;font-size:11px}
+.mob-count{font-weight:800;color:#d7dde5}
+@media(max-width:700px){.ability-strip{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+
+.effect-badge{display:inline-flex;gap:5px;align-items:center;background:#2b2330;border:1px solid #72547e;border-radius:999px;padding:3px 7px;font-size:10px;margin:3px 3px 0 0}
+.effects-line{min-height:20px;text-align:center;margin:2px 0 5px;color:var(--muted);font-size:11px}
+.entity-action-box{background:#171a1e;border:1px solid #343a42;border-radius:9px;padding:8px}
+.entity-action-rolls{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.entity-action-result{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#d7dde5;margin-top:5px}
+.effect-row{grid-template-columns:1.2fr .8fr .8fr .8fr .8fr auto!important}
+</style>
+</head>
+<body>
+<header>
+<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.4</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
+<div class="header-buttons">
+<button id="gameSettings">GAME SETTINGS ⚙</button>
+<button id="pauseAll">PAUSE ALL</button>
+<button id="addEntity" class="primary">+ ADD ENTITY</button>
+</div>
+</header>
+<main>
+<section id="players"></section>
+<section class="dice-panel"><strong>DM DICE</strong><div class="sub">Electronic rolls for NPCs, mobs, traps and hazards only.</div><div class="dice-controls" id="quickDice"><button data-die="4">d4</button><button data-die="6">d6</button><button data-die="8">d8</button><button data-die="10">d10</button><button data-die="12">d12</button><button data-die="20" class="die-selected">d20</button><button data-die="100">d100</button><label>Qty <input id="diceQty" type="number" min="1" max="100" value="1"></label><label>Mod <input id="diceMod" type="number" value="0"></label><button id="diceRoll" type="button">ROLL</button></div><div id="diceExpression" class="dice-expression">1d20</div><div id="diceResult" class="dice-result">Ready.</div></section>
+<div class="custom-title"><h2>Session Entities</h2><span class="sub">Build NPCs, objectives, hazards, machines, effects, or other session mechanics from reusable components.</span></div>
+<section id="entities"></section><div id="hiddenEntities" class="hidden-panel" style="display:none"><strong>HIDDEN / STAGED ENTITIES</strong><div class="sub">Prepared entities hidden from the active session area.</div><div id="hiddenEntityList" class="hidden-list"></div></div><div id="emptyEntities" class="empty">No session entities yet. Use + ADD ENTITY to build one.</div><section class="event-panel"><div class="event-head"><h2>Event History</h2><button id="clearEvents">CLEAR</button></div><div id="eventLog" class="event-log"></div></section>
+<div class="footer-note">v0.3.3 stores player clocks, stats, actions, timed effects, entities and event history locally in this browser. Player dice and arithmetic remain manual.</div>
+</main>
+<div id="toast" class="toast"></div>
+
+<dialog id="renameDialog"><form method="dialog" id="renameForm"><h3>Rename Timer</h3><label for="renameInput">Name</label><input id="renameInput" type="text" maxlength="40" autocomplete="off"><div class="dialog-buttons"><button value="cancel">Cancel</button><button value="default" class="primary">Save</button></div></form></dialog>
+
+<dialog id="timeDialog"><form method="dialog" id="timeForm"><h3 id="dialogTitle">Set Time</h3><label for="minutes">Minutes</label><input id="minutes" type="number" min="0" max="999" value="20"><label for="seconds">Seconds</label><input id="seconds" type="number" min="0" max="59" value="0"><div class="dialog-buttons"><button value="cancel">Cancel</button><button value="default" class="primary">Save</button></div></form></dialog>
+
+<dialog id="gameSettingsDialog">
+<form method="dialog" id="gameSettingsForm">
+<h3>Game Settings</h3>
+<label for="defaultMinutes">Default Timer — Minutes</label>
+<input id="defaultMinutes" type="number" min="0" max="999" value="20">
+<label for="defaultSeconds">Default Timer — Seconds</label>
+<input id="defaultSeconds" type="number" min="0" max="59" value="0">
+<div class="hint">This value is used for newly created bespoke timers and by each timer's RESET button. Changing it does not alter clocks already in play until you reset them.</div>
+<label class="check"><input id="applyDefaultPrimary" type="checkbox"> Also reset all four primary timers to this value now</label>
+<div class="dialog-buttons">
+<button value="cancel">Cancel</button>
+<button value="default" class="primary">Save</button>
+</div>
+</form>
+</dialog>
+
+
+
+
+<dialog id="playerStatsDialog" class="builder"><form method="dialog" id="playerStatsForm">
+<h3 id="playerStatsTitle">Player Stats</h3>
+<div class="builder-grid">
+<div><label>STR</label><input id="statSTR" type="number" min="1" max="30"><label>Custom bonus</label><input id="bonusSTR" type="number" value="0"></div>
+<div><label>DEX</label><input id="statDEX" type="number" min="1" max="30"><label>Custom bonus</label><input id="bonusDEX" type="number" value="0"></div>
+<div><label>CON</label><input id="statCON" type="number" min="1" max="30"><label>Custom bonus</label><input id="bonusCON" type="number" value="0"></div>
+<div><label>INT</label><input id="statINT" type="number" min="1" max="30"><label>Custom bonus</label><input id="bonusINT" type="number" value="0"></div>
+<div><label>WIS</label><input id="statWIS" type="number" min="1" max="30"><label>Custom bonus</label><input id="bonusWIS" type="number" value="0"></div>
+<div><label>CHA</label><input id="statCHA" type="number" min="1" max="30"><label>Custom bonus</label><input id="bonusCHA" type="number" value="0"></div>
+<div><label>AC</label><input id="statAC" type="number" min="0" max="99"></div>
+</div>
+<div class="hint">Ability modifiers are calculated automatically. AC is entered directly.</div>
+<div class="dialog-buttons"><button value="cancel">Cancel</button><button value="default" class="primary">Save</button></div>
+</form></dialog>
+
+
+<dialog id="entityEffectsDialog" class="builder"><form method="dialog" id="entityEffectsForm"><h3 id="entityEffectsTitle">Entity Timed Effects</h3><div class="hint">Applies to the entity's first TIMER component. Rate changes countdown speed; Pulse adds/subtracts seconds. Duration 0 = until removed.</div><div id="entityEffectsBuilder"></div><div class="dialog-buttons"><button type="button" id="addEntityRate">+ RATE EFFECT</button><button type="button" id="addEntityPulse">+ PULSE EFFECT</button><span style="flex:1"></span><button value="cancel">Cancel</button><button value="default" class="primary">Save</button></div></form></dialog><dialog id="effectsDialog" class="builder"><form method="dialog" id="effectsForm">
+<h3 id="effectsTitle">Timed Effects</h3>
+<div class="hint">Rate changes clock drain continuously. Example +0.25 makes a normal clock drain at 1.25×; −0.50 drains at 0.50×. Pulse adds/subtracts seconds at a repeating interval. Duration 0 = until manually removed.</div>
+<div id="effectsBuilder"></div>
+<div class="dialog-buttons"><button type="button" id="addRateEffect">+ RATE EFFECT</button><button type="button" id="addPulseEffect">+ PULSE EFFECT</button><span style="flex:1"></span><button value="cancel">Cancel</button><button value="default" class="primary">Save</button></div>
+</form></dialog>
+
+<dialog id="playerActionDialog" class="builder"><form method="dialog" id="playerActionForm"><h3 id="playerActionTitle">Player Actions</h3><div class="hint">Player actions can spend time and uses, but never roll player dice.</div><div id="playerActionBuilder"></div><button type="button" id="addPlayerActionRow" style="margin-top:9px">+ ADD ACTION / SPELL / ITEM</button><div class="dialog-buttons"><button value="cancel">Cancel</button><button type="button" id="savePlayerActions331" class="primary">Save</button></div></form></dialog>
+<dialog id="entityDialog" class="builder">
+<form method="dialog" id="entityForm">
+<h3 id="entityDialogTitle">Add Entity</h3>
+<div class="builder-grid">
+<div><label for="entityName">Name</label><input id="entityName" type="text" maxlength="50" value="New Entity"></div>
+<div><label for="entityType">Type</label><select id="entityType"><option>NPC</option><option>Mob</option><option>Objective</option><option>Hazard</option><option>Environment</option><option>Machine</option><option>Effect</option><option>Other</option></select></div>
+</div>
+<div class="builder-grid">
+<div><label class="check"><input id="entityVisible" type="checkbox" checked> Visible in active session</label></div>
+<div><label for="entityQuantity">Mob quantity</label><input id="entityQuantity" type="number" min="1" max="999" value="1"><div class="hint">Used by Mob entities for grouped weak enemies.</div></div>
+</div>
+<div class="builder-section">
+<strong>Components</strong>
+<div class="hint">Components are persistent tracked values. Timers count down in real time; counters/resources/statistics are changed manually.</div>
+<div id="componentBuilder"></div>
+<div class="builder-adds">
+<button type="button" data-add-component="timer">+ TIMER</button>
+<button type="button" data-add-component="counter">+ COUNTER</button>
+<button type="button" data-add-component="resource">+ RESOURCE</button>
+<button type="button" data-add-component="stat">+ STATISTIC</button>
+<button type="button" data-add-component="state">+ STATE/TEXT</button>
+</div>
+</div>
+<div class="builder-section">
+<strong>Actions</strong>
+<div class="hint">Actions are entity controls. They may roll attack, damage, or other dice directly and may optionally change one numeric component.</div>
+<div id="actionBuilder"></div>
+<button type="button" id="addActionRow" style="margin-top:9px">+ ADD ACTION</button>
+</div>
+<div class="dialog-buttons">
+<button value="cancel">Cancel</button>
+<button value="default" class="primary">Save Entity</button>
+</div>
+</form>
+</dialog>
+
+<script>
+(()=>{
+const STORAGE_KEY="battleClock_v02", ENTITY_KEY="battleClock_entities_v02", GAME_KEY="battleClock_game_v02", EVENT_KEY="battleClock_events_v02";
+let game=loadGame(), editingId=null, renamingId=null, editingEntityId=null;
+let events=loadEvents();
+let timers=loadTimers()||[];
+// Defensive migration: legacy Player Time Pool saves may not contain a `primary` field.
+// Preserve explicitly-primary timers; otherwise treat the first four legacy timers as players.
+let explicitPrimary=timers.filter(t=>t.primary===true);
+if(explicitPrimary.length){timers=explicitPrimary.slice(0,4)}
+else{timers=timers.slice(0,4).map((t,i)=>({...t,primary:true,name:t.name||`Player ${i+1}`}))}
+while(timers.length<4)timers.push(makeTimer(`Player ${timers.length+1}`,true));
+timers=timers.map((t,i)=>({...t,primary:true,name:t.name||`Player ${i+1}`,color:t.color||"#43d17a"}));
+let entities=loadEntities();
+
+function uid(){return (globalThis.crypto&&crypto.randomUUID)?crypto.randomUUID():String(Date.now()+Math.random())}
+function makeTimer(name,primary=false){return{id:uid(),name,primary,color:"#43d17a",remaining:game.defaultSeconds,running:false,startedAt:null,startRemaining:null,zeroNotified:false,playerActions:[],stats:{STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},effects:[]}}
+function timeRate(t){return Math.max(0,(t.effects||[]).filter(x=>x.mode==="rate").reduce((v,x)=>v+(Number(x.amount)||0),1))}
+function effective(t,now=Date.now()){if(!t.running)return Math.max(0,t.remaining);return Math.max(0,t.startRemaining-((now-t.startedAt)/1000)*timeRate(t))}
+function freeze(t){t.remaining=effective(t);t.running=false;t.startedAt=null;t.startRemaining=null}
+function toggle(t){if(t.running){freeze(t);logEvent(`${t.name} stopped at ${format(t.remaining)}`)}else if(t.remaining>0){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining;logEvent(`${t.name} started at ${format(t.remaining)}`)}saveAll();render()}
+function adjust(t,seconds){const next=Math.max(0,effective(t)+seconds);t.remaining=next;if(t.running&&next>0){t.startedAt=Date.now();t.startRemaining=next}else if(next<=0){freeze(t);t.remaining=0}saveAll();logEvent(`${t.name} ${seconds>0?"+":""}${seconds}s → ${format(next)}`);if(next===0)notifyZero(t);render()}
+function reset(t){if(!confirm(`Reset ${t.name} to ${format(game.defaultSeconds)}?`))return;t.remaining=game.defaultSeconds;t.running=false;t.startedAt=null;t.startRemaining=null;t.zeroNotified=false;logEvent(`${t.name} reset to ${format(game.defaultSeconds)}`);saveAll();render()}
+function setTime(t,seconds){t.remaining=Math.max(0,seconds);t.running=false;t.startedAt=null;t.startRemaining=null;t.zeroNotified=false;logEvent(`${t.name} set to ${format(seconds)}`);saveAll();render()}
+function format(sec){sec=Math.max(0,Math.floor(Number(sec)||0));return `${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`}
+function parseTime(v){const p=String(v||"").trim().split(":");if(p.length===2)return Math.max(0,(Number(p[0])||0)*60+(Number(p[1])||0));return Math.max(0,Number(v)||0)}
+function button(label,cls,fn){const b=document.createElement("button");b.type="button";b.textContent=label;if(cls)b.className=cls;b.addEventListener("click",fn);return b}
+
+function timerCard(t){
+ const sec=effective(t),card=document.createElement("article");card.className="timer primary-timer"+(sec===0?" zero":"");card.dataset.timerId=t.id;
+ if(t.running){card.style.borderColor=t.color;card.style.boxShadow=`0 0 0 3px ${t.color}24,0 0 24px ${t.color}26`}
+ const head=document.createElement("div");head.className="timer-head";const identity=document.createElement("div");identity.className="identity";
+ const color=document.createElement("input");color.type="color";color.className="color-picker";color.value=t.color||"#43d17a";color.addEventListener("input",()=>{t.color=color.value;saveAll();render()});
+ const name=document.createElement("div");name.className="name";name.textContent=t.name;const rn=button("RENAME","",()=>openRename(t));rn.style.cssText="padding:7px 9px;font-size:11px";identity.append(color,name,rn);
+ const status=document.createElement("div");status.className="status";status.textContent=sec===0?"OUT OF TIME":(t.running?"● RUNNING":"STOPPED");if(t.running)status.style.color=t.color;head.append(identity,status);
+ const statWrap=document.createElement("div");statWrap.className="ability-strip";
+ const stats=Object.assign({STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},t.stats||{});
+ ["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>{const z=document.createElement("div");z.className="ability";const mod=Math.floor((Number(stats[k])-10)/2);const bonus=Number(stats["bonus"+k])||0;z.innerHTML=`<b>${k}</b><span>${stats[k]} ${mod>=0?"+":""}${mod} <small>(${bonus>=0?"+":""}${bonus})</small></span>`;statWrap.append(z)});
+ const ac=document.createElement("div");ac.className="ability";ac.innerHTML=`<b>AC</b><span>🛡 ${stats.AC}</span>`;statWrap.append(ac);
+ const statEdit=button("EDIT STATS","stats-edit",()=>openPlayerStats(t));
+ const clock=document.createElement("div");clock.className="clock";clock.textContent=format(sec);clock.title="Click to start or stop";clock.onclick=()=>toggle(t);
+ const controls=document.createElement("div");controls.className="controls";
+ [-30,-15,-10,-5].forEach(x=>controls.append(button(`−${Math.abs(x)}`,"adjust",()=>adjust(t,x))));
+ controls.append(button(t.running?"STOP":"START","toggle",()=>toggle(t)));
+ [5,10,15,30].forEach(x=>controls.append(button(`+${x}`,"adjust",()=>adjust(t,x))));
+ const effectsLine=document.createElement("div");effectsLine.className="effects-line";const rate=timeRate(t);if(rate!==1){const b=document.createElement("span");b.className="effect-badge";b.textContent=`⏱ ${rate.toFixed(2)}×`;effectsLine.append(b)}(t.effects||[]).forEach(x=>{const b=document.createElement("span");b.className="effect-badge";b.textContent=`${x.name}${x.duration>0?` ${format(x.remainingDuration??x.duration)}`:""}`;effectsLine.append(b)});
+ const secondary=document.createElement("div");secondary.className="secondary";secondary.append(button("SET TIME","",()=>openSetTime(t)),button("EFFECTS","",()=>openEffects(t)),button(`RESET ${format(game.defaultSeconds)}`,"",()=>reset(t)));
+ const pa=document.createElement("div");pa.className="player-actions";const ph=document.createElement("div");ph.className="player-actions-head";ph.innerHTML="<strong>ACTIONS / SPELLS / ITEMS</strong>";ph.append(button("EDIT","",()=>openPlayerActions(t)));pa.append(ph);if((t.playerActions||[]).length){const pl=document.createElement("div");pl.className="player-action-list";t.playerActions.forEach(a=>pl.append(playerActionView(t,a)));pa.append(pl)}card.append(head,statWrap,statEdit,clock,effectsLine,controls,secondary,pa);return card
+}
+
+function compEffective(c,now=Date.now()){if(c.kind!=="timer"||!c.running)return Math.max(0,Number(c.value)||0);return Math.max(0,(Number(c.startValue)||0)-Math.floor((now-c.startedAt)/1000))}
+function freezeComp(c){c.value=compEffective(c);c.running=false;c.startedAt=null;c.startValue=null}
+function changeComp(entity,c,delta){if(c.kind==="timer"){const n=Math.max(0,compEffective(c)+delta);c.value=n;if(c.running&&n>0){c.startedAt=Date.now();c.startValue=n}else if(n<=0)freezeComp(c)}else{c.value=(Number(c.value)||0)+delta;if(c.kind==="resource"){c.value=Math.max(0,Math.min(Number(c.max)||0,c.value))}}logEvent(`${entity.name}: ${c.name} ${delta>0?"+":""}${delta} → ${displayComp(c)}`);saveAll();render()}
+function toggleComp(entity,c){if(c.running){freezeComp(c);logEvent(`${entity.name}: ${c.name} stopped at ${format(c.value)}`)}else if(compEffective(c)>0){c.value=compEffective(c);c.running=true;c.startedAt=Date.now();c.startValue=c.value;logEvent(`${entity.name}: ${c.name} started`)}saveAll();render()}
+function displayComp(c){if(c.kind==="timer")return format(compEffective(c));if(c.kind==="resource")return `${c.value} / ${c.max}`;return String(c.value??"")}
+
+function componentView(entity,c){
+ const box=document.createElement("div");box.className="component";box.dataset.compId=c.id;
+ const head=document.createElement("div");head.className="component-head";const nm=document.createElement("div");nm.className="component-name";nm.textContent=c.name;const val=document.createElement("div");val.className="component-value";val.textContent=displayComp(c);head.append(nm,val);box.append(head);
+ if(c.kind==="resource"){const tr=document.createElement("div");tr.className="resource-track";const fill=document.createElement("div");fill.className="resource-fill";fill.style.width=`${Math.max(0,Math.min(100,(Number(c.max)?Number(c.value)/Number(c.max)*100:0)))}%`;tr.append(fill);box.append(tr)}
+ const ctr=document.createElement("div");ctr.className="comp-controls";
+ if(c.kind==="timer"){ctr.append(button("−30","",()=>changeComp(entity,c,-30)),button("−10","",()=>changeComp(entity,c,-10)),button(c.running?"STOP":"START","",()=>toggleComp(entity,c)),button("+10","",()=>changeComp(entity,c,10)),button("+30","",()=>changeComp(entity,c,30)))}
+ else if(["counter","resource"].includes(c.kind)){ctr.append(button("−10","",()=>changeComp(entity,c,-10)),button("−1","",()=>changeComp(entity,c,-1)),button("+1","",()=>changeComp(entity,c,1)),button("+10","",()=>changeComp(entity,c,10)))}
+ if(ctr.children.length)box.append(ctr);
+ return box
+}
+
+function entityCard(e){
+ const card=document.createElement("article");card.className="entity-card";card.dataset.entityId=e.id;
+ const head=document.createElement("div");head.className="entity-head";
+ const left=document.createElement("div");left.innerHTML=`<div class="entity-title"></div><div class="entity-type"></div>`;left.querySelector(".entity-title").textContent=e.name;left.querySelector(".entity-type").textContent=e.type+(e.type==="Mob"?` · ×${Math.max(1,Number(e.quantity)||1)}`:"");
+ const tools=document.createElement("div");tools.className="entity-tools";tools.append(button("EFFECTS","",()=>openEntityEffects(e)),button("HIDE","",()=>setEntityVisibility(e,false)),button("EDIT","",()=>openEntityBuilder(e)),button("DELETE","danger",()=>deleteEntity(e)));head.append(left,tools);card.append(head);
+ const list=document.createElement("div");list.className="component-list";(e.components||[]).forEach(c=>list.append(componentView(e,c)));if(e.components?.length)card.append(list);
+ if(e.actions?.length){const actions=document.createElement("div");actions.className="entity-actions";e.actions.forEach(a=>{const wrap=document.createElement("div");wrap.className="entity-action-box";const title=document.createElement("strong");title.textContent=a.name||"ACTION";wrap.append(title);if(a.reference){const r=document.createElement("div");r.className="action-ref";r.textContent=a.reference;wrap.append(r)}const rb=document.createElement("div");rb.className="entity-action-rolls";const result=document.createElement("div");result.className="entity-action-result";
+ if(a.attackMod!==""&&a.attackMod!=null){const m=Number(a.attackMod)||0,expr=`1d20${m?`${m>0?"+":""}${m}`:""}`;rb.append(button(`ROLL ATTACK d20${m?`${m>0?"+":""}${m}`:""}`,"",()=>entityInlineRoll(e,a,expr,result)));if(e.type==="Mob"&&Number(e.quantity)>1)rb.append(button(`ROLL ATTACK ×${Math.max(1,Number(e.quantity)||1)}`,"",()=>entityInlineRoll(e,a,expr,result,true)))}
+ if(a.damageDice){rb.append(button(`ROLL DAMAGE ${a.damageDice}`,"",()=>entityInlineRoll(e,a,a.damageDice,result)));if(e.type==="Mob"&&Number(e.quantity)>1)rb.append(button(`ROLL DAMAGE ×${Math.max(1,Number(e.quantity)||1)}`,"",()=>entityInlineRoll(e,a,a.damageDice,result,true)))}
+ if(a.rollDice){rb.append(button(`ROLL ${a.rollDice}`,"",()=>entityInlineRoll(e,a,a.rollDice,result)));if(e.type==="Mob"&&Number(e.quantity)>1)rb.append(button(`ROLL ×${Math.max(1,Number(e.quantity)||1)}`,"",()=>entityInlineRoll(e,a,a.rollDice,result,true)))}
+ if((a.attackMod===""||a.attackMod==null)&&!a.damageDice&&!a.rollDice){extractDice(a.reference||"").forEach(expr=>rb.append(button(`ROLL ${expr}`,"",()=>entityInlineRoll(e,a,expr,result))))}
+ rb.append(button("USE ACTION","",()=>runAction(e,a)));wrap.append(rb,result);actions.append(wrap)});card.append(actions)}
+ return card
+}
+
+
+function secureInt(max){if(window.crypto&&crypto.getRandomValues){const range=4294967296,limit=range-(range%max),b=new Uint32Array(1);let x;do{crypto.getRandomValues(b);x=b[0]}while(x>=limit);return x%max}return Math.floor(Math.random()*max)}
+function rollDice(q,s,m=0){q=Math.max(1,Math.min(100,Number(q)||1));s=Math.max(2,Number(s)||20);m=Number(m)||0;const rolls=Array.from({length:q},()=>secureInt(s)+1);return{q,s,m,rolls,total:rolls.reduce((a,b)=>a+b,0)+m}}
+function parseDice(x){const m=String(x||"").trim().match(/^(\d*)d(\d+)\s*([+-]\s*\d+)?$/i);return m?{q:Number(m[1]||1),s:Number(m[2]),m:Number((m[3]||"0").replace(/\s/g,""))}:null}
+function extractDice(t){return [...String(t).matchAll(/\\b\\d*d\\d+(?:\\s*[+-]\\s*\\d+)?/gi)].map(x=>x[0].replace(/\\s/g,""))}
+function showRoll(label,r){const mod=r.m?`${r.m>0?"+":""}${r.m}`:"";const msg=`${label}: ${r.q}d${r.s}${mod} → ${r.total} [${r.rolls.join(", ")}]`;document.getElementById("diceResult").textContent=msg;logEvent(msg)}
+function rollForEntity(e,a,expr){const p=parseDice(expr);if(p)showRoll(`${e.name} — ${a.name}`,rollDice(p.q,p.s,p.m))}
+function entityInlineRoll(e,a,expr,resultEl,batch=false){const p=parseDice(expr);if(!p){toast(`Invalid dice: ${expr}`);return}const n=batch&&e.type==="Mob"?Math.max(1,Number(e.quantity)||1):1;if(n===1){const r=rollDice(p.q,p.s,p.m),label=`${p.q}d${p.s}${p.m?`${p.m>0?"+":""}${p.m}`:""} → ${r.total} [${r.rolls.join(", ")}]`;resultEl.textContent=label;logEvent(`${e.name} — ${a.name}: ${label}`)}else{const results=[];for(let i=0;i<n;i++)results.push(rollDice(p.q,p.s,p.m).total);const label=`×${n} ${expr}: ${results.join(", ")}`;resultEl.textContent=label;logEvent(`${e.name} — ${a.name}: ${label}`)}saveEvents()}
+function playerActionView(t,a){
+ const x=document.createElement("div");x.className="player-action";
+ const n=document.createElement("div");n.className="player-action-name";
+ const limited=a.maxUses!==""&&a.maxUses!=null;
+ const remaining=limited?Math.max(0,Number(a.currentUses??a.maxUses)||0):null;
+ n.textContent=`${a.kind||"Action"}: ${a.name}`;
+ if(limited){const badge=document.createElement("span");badge.className="uses-badge";badge.textContent=`${remaining}/${a.maxUses}`;n.append(badge)}
+ if(a.description){const ib=button("ⓘ","info-btn",()=>x.classList.toggle("tooltip-open"));ib.title="Show description";n.append(ib);const tip=document.createElement("div");tip.className="action-tooltip";tip.textContent=a.description;x.append(n,tip)}else{x.append(n)}
+ if(a.reference){const r=document.createElement("div");r.className="player-action-ref";r.textContent=a.reference;x.append(r)}
+ const footer=document.createElement("div");footer.className="action-footer";const cost=Number(a.timeCost)||0;footer.append(button(cost?`USE −${cost}s`:"USE","",()=>usePlayerAction(t,a)));
+ if(limited)footer.append(button("RESET","",()=>resetPlayerActionUses(t,a)));
+ x.append(footer);return x
+}
+function usePlayerAction(t,a){const limited=a.maxUses!==""&&a.maxUses!=null;if(limited&&Number(a.currentUses??a.maxUses)<=0){toast(`${a.name}: no uses remaining.`);return}const cost=Math.max(0,Number(a.timeCost)||0);if(cost)adjust(t,-cost);if(limited)a.currentUses=Math.max(0,Number(a.currentUses??a.maxUses)-1);logEvent(`${t.name}: ${a.name} used — PLAYER ROLL MANUALLY`);saveAll();render()}
+function resetPlayerActionUses(t,a){if(a.maxUses===""||a.maxUses==null)return;a.currentUses=Math.max(0,Number(a.maxUses)||0);logEvent(`${t.name}: ${a.name} uses reset to ${a.currentUses}`);saveAll();render()}
+let editingPlayerId=null, editingStatsPlayerId=null;
+function addPlayerActionRow(a={id:uid(),kind:"Action",name:"Action",reference:"",description:"",timeCost:0,maxUses:"",currentUses:""}){
+ const h=document.getElementById("playerActionBuilder"),r=document.createElement("div");r.className="builder-row action-row";r.dataset.id=a.id||uid();
+ const migratedMax=(a.maxUses!==undefined?a.maxUses:(a.uses??""));const migratedCurrent=(a.currentUses!==undefined?a.currentUses:migratedMax);
+ r.innerHTML='<div><label>Type</label><select class="ppa-kind"><option>Action</option><option>Attack</option><option>Spell</option><option>Item</option><option>Ability</option></select></div><div><label>Name</label><input class="ppa-name"></div><div><label>Reference / dice</label><input class="ppa-ref" placeholder="DEX 15 · 8d6 Fire"></div><div><label>Time cost (sec)</label><input class="ppa-time" type="number" min="0"></div><div><label>Current uses</label><input class="ppa-current" type="number" min="0"></div><div><label>Maximum uses (blank = ∞)</label><input class="ppa-max" type="number" min="0"></div><div style="grid-column:1/-1"><label>Description / rules tooltip</label><textarea class="ppa-desc" placeholder="Range, targeting, special rules, effects, reminders..."></textarea></div>';
+ r.querySelector(".ppa-kind").value=a.kind||"Action";r.querySelector(".ppa-name").value=a.name||"";r.querySelector(".ppa-ref").value=a.reference||"";r.querySelector(".ppa-time").value=a.timeCost||0;r.querySelector(".ppa-current").value=migratedCurrent;r.querySelector(".ppa-max").value=migratedMax;r.querySelector(".ppa-desc").value=a.description||"";r.append(button("REMOVE","danger",()=>r.remove()));h.append(r)
+}
+function openPlayerActions(t){editingPlayerId=t.id;document.getElementById("playerActionTitle").textContent=`Actions — ${t.name}`;document.getElementById("playerActionBuilder").innerHTML="";(t.playerActions||[]).forEach(addPlayerActionRow);document.getElementById("playerActionDialog").showModal()}
+
+
+function openPlayerStats(t){editingStatsPlayerId=t.id;const st=Object.assign({STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},t.stats||{});document.getElementById("playerStatsTitle").textContent=`Stats — ${t.name}`;["STR","DEX","CON","INT","WIS","CHA","AC"].forEach(k=>document.getElementById("stat"+k).value=st[k]);["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>document.getElementById("bonus"+k).value=Number(st["bonus"+k])||0);document.getElementById("playerStatsDialog").showModal()}
+
+
+let editingEffectsEntityId=null;
+function addEntityEffectRow(x={id:uid(),name:"Effect",mode:"rate",amount:.25,interval:10,duration:0,remainingDuration:0,pulseElapsed:0}){const h=document.getElementById("entityEffectsBuilder"),r=document.createElement("div");r.className="builder-row effect-row";r.dataset.id=x.id||uid();r.dataset.mode=x.mode||"rate";r.innerHTML='<div><label>Name</label><input class="fx-name"></div><div><label>Mode</label><input class="fx-mode" disabled></div><div><label>Amount</label><input class="fx-amount" type="number" step=".05"></div><div><label>Interval sec</label><input class="fx-interval" type="number" min="1"></div><div><label>Duration sec (0=∞)</label><input class="fx-duration" type="number" min="0"></div>';r.querySelector(".fx-name").value=x.name||"Effect";r.querySelector(".fx-mode").value=(x.mode||"rate").toUpperCase();r.querySelector(".fx-amount").value=Number(x.amount)||0;r.querySelector(".fx-interval").value=Math.max(1,Number(x.interval)||10);r.querySelector(".fx-duration").value=Math.max(0,Number(x.remainingDuration??x.duration)||0);if(x.mode==="rate")r.querySelector(".fx-interval").parentElement.style.visibility="hidden";r.append(button("REMOVE","danger",()=>r.remove()));h.append(r)}
+function openEntityEffects(e){editingEffectsEntityId=e.id;document.getElementById("entityEffectsTitle").textContent=`Timed Effects — ${e.name}`;document.getElementById("entityEffectsBuilder").innerHTML="";(e.effects||[]).forEach(addEntityEffectRow);document.getElementById("entityEffectsDialog").showModal()}
+let editingEffectsPlayerId=null;
+function addEffectRow(x={id:uid(),name:"Effect",mode:"rate",amount:0.25,interval:10,duration:0,remainingDuration:0,pulseElapsed:0}){
+ const host=document.getElementById("effectsBuilder"),row=document.createElement("div");row.className="builder-row effect-row";row.dataset.id=x.id||uid();row.dataset.mode=x.mode||"rate";
+ row.innerHTML='<div><label>Name</label><input class="fx-name"></div><div><label>Mode</label><input class="fx-mode" disabled></div><div><label class="fx-amount-label">Amount</label><input class="fx-amount" type="number" step="0.05"></div><div><label>Interval sec</label><input class="fx-interval" type="number" min="1"></div><div><label>Duration sec (0=∞)</label><input class="fx-duration" type="number" min="0"></div>';
+ row.querySelector(".fx-name").value=x.name||"Effect";row.querySelector(".fx-mode").value=(x.mode||"rate").toUpperCase();row.querySelector(".fx-amount").value=Number(x.amount)||0;row.querySelector(".fx-interval").value=Math.max(1,Number(x.interval)||10);row.querySelector(".fx-duration").value=Math.max(0,Number(x.remainingDuration??x.duration)||0);
+ if(x.mode==="rate"){row.querySelector(".fx-amount-label").textContent="Rate modifier";row.querySelector(".fx-interval").parentElement.style.visibility="hidden"}else row.querySelector(".fx-amount-label").textContent="Pulse seconds";
+ row.append(button("REMOVE","danger",()=>row.remove()));host.append(row)
+}
+function openEffects(t){editingEffectsPlayerId=t.id;document.getElementById("effectsTitle").textContent=`Timed Effects — ${t.name}`;document.getElementById("effectsBuilder").innerHTML="";(t.effects||[]).forEach(addEffectRow);document.getElementById("effectsDialog").showModal()}
+
+function runAction(e,a){
+ let msg=`${e.name}: ${a.name}`;
+ if(a.targetId&&a.delta!==""&&a.delta!=null){const c=e.components.find(x=>x.id===a.targetId);if(c&&["timer","counter","resource"].includes(c.kind)){const d=Number(a.delta)||0;changeComp(e,c,d);msg+=` (${c.name} ${d>0?"+":""}${d})`;logEvent(msg);return}}
+ logEvent(msg);saveAll();render();
+}
+function setEntityVisibility(e,visible){e.visible=visible;logEvent(`${e.name} ${visible?"shown":"hidden"}`);saveAll();render()}
+function deleteEntity(e){if(!confirm(`Delete ${e.name}?`))return;entities=entities.filter(x=>x.id!==e.id);logEvent(`${e.name} deleted`);saveAll();render()}
+
+function render(){
+ const p=document.getElementById("players"),e=document.getElementById("entities"),hp=document.getElementById("hiddenEntities"),hl=document.getElementById("hiddenEntityList");p.innerHTML="";e.innerHTML="";hl.innerHTML="";
+ timers.forEach(t=>p.append(timerCard(t)));
+ const visible=entities.filter(x=>x.visible!==false),hidden=entities.filter(x=>x.visible===false);
+ visible.forEach(x=>e.append(entityCard(x)));
+ hidden.forEach(x=>{const chip=document.createElement("div");chip.className="hidden-chip";const label=document.createElement("span");label.textContent=`${x.name} (${x.type})`;chip.append(label,button("SHOW","",()=>setEntityVisibility(x,true)));hl.append(chip)});
+ hp.style.display=hidden.length?"block":"none";
+ document.getElementById("emptyEntities").style.display=visible.length?"none":"block";renderEvents();
+}
+function saveAll(){
+ const now=Date.now();const tc=timers.map(t=>t.running?{...t,remaining:effective(t,now)}:{...t});localStorage.setItem(STORAGE_KEY,JSON.stringify(tc));
+ const ec=entities.map(e=>({...e,components:(e.components||[]).map(c=>c.kind==="timer"&&c.running?{...c,value:compEffective(c,now)}:{...c})}));localStorage.setItem(ENTITY_KEY,JSON.stringify(ec));
+}
+function loadTimers(){try{let raw=localStorage.getItem(STORAGE_KEY)||localStorage.getItem("battleClock_v01")||localStorage.getItem("playerTimePool_v2");if(!raw)return null;return JSON.parse(raw).map(t=>({...t,primary:!!t.primary,color:t.color||"#43d17a",running:false,startedAt:null,startRemaining:null,playerActions:Array.isArray(t.playerActions)?t.playerActions.map(a=>({...a,maxUses:a.maxUses!==undefined?a.maxUses:(a.uses??""),currentUses:a.currentUses!==undefined?a.currentUses:(a.maxUses!==undefined?a.maxUses:(a.uses??"")),description:a.description||""})):[],stats:Object.assign({STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},t.stats||{}),effects:Array.isArray(t.effects)?t.effects.map(x=>({...x,remainingDuration:Number(x.remainingDuration??x.duration)||0,pulseElapsed:Number(x.pulseElapsed)||0})):[]}))}catch(e){return null}}
+function loadEntities(){try{return (JSON.parse(localStorage.getItem(ENTITY_KEY)||"[]")||[]).map(e=>({...e,visible:e.visible!==false,quantity:Math.max(1,Number(e.quantity)||1),effects:Array.isArray(e.effects)?e.effects:[],components:(e.components||[]).map(c=>({...c,running:false,startedAt:null,startValue:null}))}))}catch(e){return[]}}
+function loadGame(){try{return Object.assign({defaultSeconds:20*60},JSON.parse(localStorage.getItem(GAME_KEY)||localStorage.getItem("battleClock_game_v01")||"{}"))}catch(e){return{defaultSeconds:20*60}}}
+function saveGame(){localStorage.setItem(GAME_KEY,JSON.stringify(game))}
+function loadEvents(){try{return JSON.parse(localStorage.getItem(EVENT_KEY)||localStorage.getItem("battleClock_events_v01")||"[]")}catch(e){return[]}}
+function saveEvents(){localStorage.setItem(EVENT_KEY,JSON.stringify(events.slice(-250)))}
+function logEvent(message){events.push({at:Date.now(),message});if(events.length>250)events=events.slice(-250);saveEvents();renderEvents()}
+function renderEvents(){const el=document.getElementById("eventLog");if(!el)return;el.innerHTML="";if(!events.length){el.innerHTML='<div class="empty">No events yet.</div>';return}events.slice().reverse().slice(0,80).forEach(x=>{const row=document.createElement("div");row.className="event-row";const tm=document.createElement("div");tm.className="event-time";tm.textContent=new Date(x.at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"});const msg=document.createElement("div");msg.textContent=x.message;row.append(tm,msg);el.append(row)})}
+function notifyZero(t){if(t.zeroNotified)return;t.zeroNotified=true;logEvent(`${t.name} is OUT OF TIME`);saveAll()}
+function toast(msg){const x=document.getElementById("toast");x.textContent=msg;x.style.display="block";clearTimeout(toast._t);toast._t=setTimeout(()=>x.style.display="none",3000)}
+function openRename(t){renamingId=t.id;const i=document.getElementById("renameInput");i.value=t.name;document.getElementById("renameDialog").showModal();setTimeout(()=>{i.focus();i.select()},0)}
+function openSetTime(t){editingId=t.id;const sec=effective(t);document.getElementById("dialogTitle").textContent=`Set Time — ${t.name}`;document.getElementById("minutes").value=Math.floor(sec/60);document.getElementById("seconds").value=sec%60;document.getElementById("timeDialog").showModal()}
+
+function componentDefaults(kind){const base={id:uid(),kind,name:""};if(kind==="timer")return{...base,name:"Timer",value:60,running:false,startedAt:null,startValue:null};if(kind==="counter")return{...base,name:"Progress",value:0};if(kind==="resource")return{...base,name:"Resource",value:10,max:10};if(kind==="stat")return{...base,name:"AC",value:"10"};return{...base,name:"State",value:"Ready"}}
+function addComponentRow(c){
+ const host=document.getElementById("componentBuilder"),row=document.createElement("div");row.className="builder-row";row.dataset.kind=c.kind;row.dataset.id=c.id||uid();
+ const name=document.createElement("div");name.innerHTML='<label>Name</label>';const ni=document.createElement("input");ni.value=c.name||"";ni.className="bc-name";name.append(ni);
+ const value=document.createElement("div");value.innerHTML='<label>Value</label>';const vi=document.createElement("input");vi.className="bc-value";vi.value=c.kind==="timer"?format(c.value):c.value??"";value.append(vi);
+ const extra=document.createElement("div");extra.innerHTML='<label>'+ (c.kind==="resource"?"Maximum":"Type") +'</label>';
+ if(c.kind==="resource"){const mi=document.createElement("input");mi.className="bc-max";mi.type="number";mi.value=c.max??10;extra.append(mi)}else{const tag=document.createElement("input");tag.disabled=true;tag.value=c.kind.toUpperCase();extra.append(tag)}
+ const del=button("REMOVE","danger",()=>row.remove());row.append(name,value,extra,del);host.append(row)
+}
+function addActionRow(a={id:uid(),name:"Action",reference:"",attackMod:"",damageDice:"",rollDice:"",targetId:"",delta:""}){
+ const host=document.getElementById("actionBuilder"),row=document.createElement("div");row.className="builder-row action-row";row.dataset.id=a.id||uid();
+ row.innerHTML='<div><label>Action name</label><input class="ba-name"></div><div><label>Reference / notes</label><input class="ba-ref" placeholder="Bite, ranged 20 ft, etc."></div><div><label>Attack modifier</label><input class="ba-atk" type="number" placeholder="+2"></div><div><label>Damage dice</label><input class="ba-dmg" placeholder="1d4-1"></div><div><label>Other roll</label><input class="ba-roll" placeholder="1d6+2"></div><div><label>Optional effect</label><input class="ba-effect" placeholder="Component name : -1"></div>';
+ row.querySelector(".ba-name").value=a.name||"";row.querySelector(".ba-ref").value=a.reference||"";row.querySelector(".ba-atk").value=a.attackMod??"";row.querySelector(".ba-dmg").value=a.damageDice||"";row.querySelector(".ba-roll").value=a.rollDice||"";
+ if(a.targetId){const ent=editingEntityId?entities.find(e=>e.id===editingEntityId):null,c=ent?.components.find(c=>c.id===a.targetId);row.querySelector(".ba-effect").value=c?`${c.name} : ${a.delta}`:""}
+ row.append(button("REMOVE","danger",()=>row.remove()));host.append(row)
+}
+function openEntityBuilder(e=null){
+ editingEntityId=e?.id||null;document.getElementById("entityDialogTitle").textContent=e?"Edit Entity":"Add Entity";document.getElementById("entityName").value=e?.name||"New Entity";document.getElementById("entityType").value=e?.type||"NPC";document.getElementById("entityVisible").checked=e?.visible!==false;document.getElementById("entityQuantity").value=Math.max(1,Number(e?.quantity)||1);document.getElementById("componentBuilder").innerHTML="";document.getElementById("actionBuilder").innerHTML="";
+ (e?.components||[]).forEach(addComponentRow);(e?.actions||[]).forEach(addActionRow);document.getElementById("entityDialog").showModal();
+}
+function collectEntity(){
+ const old=editingEntityId?entities.find(e=>e.id===editingEntityId):null;const components=[];
+ document.querySelectorAll("#componentBuilder .builder-row").forEach(row=>{const kind=row.dataset.kind,name=row.querySelector(".bc-name").value.trim()||kind,valueRaw=row.querySelector(".bc-value").value;let c={id:row.dataset.id,kind,name};if(kind==="timer"){c.value=parseTime(valueRaw);c.running=false;c.startedAt=null;c.startValue=null}else if(["counter","resource"].includes(kind)){c.value=Number(valueRaw)||0;if(kind==="resource"){c.max=Math.max(0,Number(row.querySelector(".bc-max").value)||0);c.value=Math.max(0,Math.min(c.max,c.value))}}else c.value=valueRaw;c=Object.assign(c,old?.components?.find(x=>x.id===c.id)&&kind==="timer"?{running:false}:{});components.push(c)});
+ const actions=[];document.querySelectorAll("#actionBuilder .action-row").forEach(row=>{const effect=row.querySelector(".ba-effect").value.trim();let targetId="",delta="";if(effect){const parts=effect.split(":");const comp=components.find(c=>c.name.toLowerCase()===String(parts[0]||"").trim().toLowerCase());if(comp){targetId=comp.id;delta=String(parts.slice(1).join(":")).trim()}}actions.push({id:row.dataset.id,name:row.querySelector(".ba-name").value.trim()||"Action",reference:row.querySelector(".ba-ref").value.trim(),attackMod:row.querySelector(".ba-atk").value,damageDice:row.querySelector(".ba-dmg").value.trim(),rollDice:row.querySelector(".ba-roll").value.trim(),targetId,delta})});
+ return{id:old?.id||uid(),name:document.getElementById("entityName").value.trim()||"Entity",type:document.getElementById("entityType").value,visible:document.getElementById("entityVisible").checked,quantity:Math.max(1,Number(document.getElementById("entityQuantity").value)||1),components,actions,effects:old?.effects||[]}
+}
+
+document.getElementById("renameForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===renamingId);if(t){t.name=document.getElementById("renameInput").value.trim()||"Player";saveAll();render()}document.getElementById("renameDialog").close()});
+document.getElementById("timeForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingId);if(t)setTime(t,(Number(document.getElementById("minutes").value)||0)*60+(Number(document.getElementById("seconds").value)||0));document.getElementById("timeDialog").close()});
+document.getElementById("addEntity").onclick=()=>openEntityBuilder();
+document.querySelectorAll("[data-add-component]").forEach(b=>b.onclick=()=>addComponentRow(componentDefaults(b.dataset.addComponent)));
+document.getElementById("addActionRow").onclick=()=>addActionRow();
+document.getElementById("entityForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const ent=collectEntity();if(editingEntityId){const i=entities.findIndex(x=>x.id===editingEntityId);entities[i]=ent;logEvent(`${ent.name} updated`)}else{entities.push(ent);logEvent(`${ent.name} added`)}saveAll();render();document.getElementById("entityDialog").close()});
+document.getElementById("pauseAll").onclick=()=>{timers.forEach(t=>t.running&&freeze(t));entities.forEach(e=>e.components.forEach(c=>c.kind==="timer"&&c.running&&freezeComp(c)));logEvent("ALL CLOCKS PAUSED");saveAll();render()};
+document.getElementById("clearEvents").onclick=()=>{if(confirm("Clear event history?")){events=[];saveEvents();renderEvents()}};
+document.getElementById("gameSettings").onclick=()=>{document.getElementById("defaultMinutes").value=Math.floor(game.defaultSeconds/60);document.getElementById("defaultSeconds").value=game.defaultSeconds%60;document.getElementById("gameSettingsDialog").showModal()};
+document.getElementById("gameSettingsForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();game.defaultSeconds=Math.max(0,(Number(document.getElementById("defaultMinutes").value)||0)*60+(Number(document.getElementById("defaultSeconds").value)||0));saveGame();if(document.getElementById("applyDefaultPrimary").checked){timers.forEach(t=>{t.remaining=game.defaultSeconds;t.running=false;t.startedAt=null;t.startRemaining=null});document.getElementById("applyDefaultPrimary").checked=false}saveAll();render();document.getElementById("gameSettingsDialog").close();toast(`Default player timer set to ${format(game.defaultSeconds)}.`)});
+
+
+let selectedDie=20;
+function updateDiceExpression(){const q=Math.max(1,Number(document.getElementById("diceQty").value)||1),m=Number(document.getElementById("diceMod").value)||0;document.getElementById("diceExpression").textContent=`${q}d${selectedDie}${m?`${m>0?"+":""}${m}`:""}`}
+document.querySelectorAll("#quickDice [data-die]").forEach(b=>b.onclick=()=>{selectedDie=Number(b.dataset.die);document.querySelectorAll("#quickDice [data-die]").forEach(x=>x.classList.toggle("die-selected",x===b));updateDiceExpression()});
+document.getElementById("diceQty").addEventListener("input",updateDiceExpression);
+document.getElementById("diceMod").addEventListener("input",updateDiceExpression);
+document.getElementById("diceRoll").onclick=()=>{const q=Math.max(1,Number(document.getElementById("diceQty").value)||1),m=Number(document.getElementById("diceMod").value)||0;showRoll("DM roll",rollDice(q,selectedDie,m))};
+updateDiceExpression();
+document.getElementById("playerStatsForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingStatsPlayerId);if(t){t.stats={};["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>t.stats[k]=Math.max(1,Math.min(30,Number(document.getElementById("stat"+k).value)||10)));t.stats.AC=Math.max(0,Number(document.getElementById("statAC").value)||0);["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>t.stats["bonus"+k]=Number(document.getElementById("bonus"+k).value)||0);logEvent(`${t.name}: stats updated`);saveAll();render()}document.getElementById("playerStatsDialog").close()});
+document.getElementById("addEntityRate").onclick=()=>addEntityEffectRow({id:uid(),name:"Poison",mode:"rate",amount:.25,interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
+document.getElementById("addEntityPulse").onclick=()=>addEntityEffectRow({id:uid(),name:"Burning",mode:"pulse",amount:-5,interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
+document.getElementById("entityEffectsForm").addEventListener("submit",ev=>{if(ev.submitter?.value==="cancel")return;ev.preventDefault();const ent=entities.find(x=>x.id===editingEffectsEntityId);if(ent){ent.effects=[];document.querySelectorAll("#entityEffectsBuilder .effect-row").forEach(r=>{const duration=Math.max(0,Number(r.querySelector(".fx-duration").value)||0);ent.effects.push({id:r.dataset.id,name:r.querySelector(".fx-name").value.trim()||"Effect",mode:r.dataset.mode,amount:Number(r.querySelector(".fx-amount").value)||0,interval:Math.max(1,Number(r.querySelector(".fx-interval").value)||10),duration,remainingDuration:duration,pulseElapsed:0})});logEvent(`${ent.name}: timed effects updated`);saveAll();render()}document.getElementById("entityEffectsDialog").close()});
+document.getElementById("addRateEffect").onclick=()=>addEffectRow({id:uid(),name:"Poison",mode:"rate",amount:.25,interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
+document.getElementById("addPulseEffect").onclick=()=>addEffectRow({id:uid(),name:"Burning",mode:"pulse",amount:-5,interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
+document.getElementById("effectsForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingEffectsPlayerId);if(t){const was=t.running;if(was)freeze(t);t.effects=[];document.querySelectorAll("#effectsBuilder .effect-row").forEach(r=>{const duration=Math.max(0,Number(r.querySelector(".fx-duration").value)||0);t.effects.push({id:r.dataset.id,name:r.querySelector(".fx-name").value.trim()||"Effect",mode:r.dataset.mode,amount:Number(r.querySelector(".fx-amount").value)||0,interval:Math.max(1,Number(r.querySelector(".fx-interval").value)||10),duration,remainingDuration:duration,pulseElapsed:0})});if(was&&t.remaining>0){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining}logEvent(`${t.name}: timed effects updated`);saveAll();render()}document.getElementById("effectsDialog").close()});
+function savePlayerActions331(){const t=timers.find(x=>x.id===editingPlayerId);if(!t)return;t.playerActions=[];document.querySelectorAll("#playerActionBuilder .action-row").forEach(r=>{const maxRaw=r.querySelector(".ppa-max").value,currentRaw=r.querySelector(".ppa-current").value,maxUses=maxRaw===""?"":Math.max(0,Number(maxRaw)||0),currentUses=maxUses===""?"":Math.min(maxUses,Math.max(0,currentRaw===""?maxUses:(Number(currentRaw)||0)));t.playerActions.push({id:r.dataset.id,kind:r.querySelector(".ppa-kind").value,name:r.querySelector(".ppa-name").value.trim()||"Action",reference:r.querySelector(".ppa-ref").value.trim(),description:r.querySelector(".ppa-desc").value.trim(),timeCost:Math.max(0,Number(r.querySelector(".ppa-time").value)||0),maxUses,currentUses})});logEvent(`${t.name}: actions updated`);saveAll();render();document.getElementById("playerActionDialog").close()}
+document.getElementById("savePlayerActions331").onclick=savePlayerActions331;
+document.getElementById("addPlayerActionRow").onclick=()=>addPlayerActionRow();
+document.getElementById("playerActionForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingPlayerId);if(t){t.playerActions=[];document.querySelectorAll("#playerActionBuilder .builder-row").forEach(r=>(()=>{const maxRaw=r.querySelector(".ppa-max").value,currentRaw=r.querySelector(".ppa-current").value,maxUses=maxRaw===""?"":Math.max(0,Number(maxRaw)||0),currentUses=maxUses===""?"":Math.min(maxUses,Math.max(0,currentRaw===""?maxUses:(Number(currentRaw)||0)));return{id:r.dataset.id,kind:r.querySelector(".ppa-kind").value,name:r.querySelector(".ppa-name").value.trim()||"Action",reference:r.querySelector(".ppa-ref").value.trim(),description:r.querySelector(".ppa-desc").value.trim(),timeCost:Math.max(0,Number(r.querySelector(".ppa-time").value)||0),maxUses,currentUses}})());logEvent(`${t.name}: player actions updated`);saveAll();render()}document.getElementById("playerActionDialog").close()});
+
+let lastSecond=-1;
+setInterval(()=>{const now=Date.now(),second=Math.floor(now/1000);if(second===lastSecond)return;lastSecond=second;let full=false;
+ timers.forEach(t=>{if(!t.running)return;
+ let pulseDelta=0,expired=[];(t.effects||[]).forEach(x=>{if(x.duration>0){x.remainingDuration=Math.max(0,(Number(x.remainingDuration)||0)-1);if(x.remainingDuration<=0){expired.push(x.id);return}}if(x.mode==="pulse"){x.pulseElapsed=(Number(x.pulseElapsed)||0)+1;if(x.pulseElapsed>=Math.max(1,Number(x.interval)||1)){x.pulseElapsed=0;pulseDelta+=Number(x.amount)||0;logEvent(`${t.name}: ${x.name} pulse ${Number(x.amount)>0?"+":""}${Number(x.amount)||0}s`)}}});
+ if(expired.length){const names=(t.effects||[]).filter(x=>expired.includes(x.id)).map(x=>x.name);t.effects=(t.effects||[]).filter(x=>!expired.includes(x.id));names.forEach(n=>logEvent(`${t.name}: ${n} expired`));const cur=effective(t,now);t.remaining=cur;t.startedAt=now;t.startRemaining=cur;full=true}
+ if(pulseDelta){const cur=Math.max(0,effective(t,now)+pulseDelta);t.remaining=cur;t.startedAt=now;t.startRemaining=cur;if(cur<=0){freeze(t);notifyZero(t)}full=true}
+ const v=effective(t,now);const card=document.querySelector(`[data-timer-id="${CSS.escape(t.id)}"]`);if(card){card.querySelector(".clock").textContent=format(v)}if(v<=0){t.remaining=0;freeze(t);notifyZero(t);full=true}});
+ entities.forEach(e=>e.components.forEach(c=>{if(c.kind!=="timer"||!c.running)return;const v=compEffective(c,now);const el=document.querySelector(`[data-entity-id="${CSS.escape(e.id)}"] [data-comp-id="${CSS.escape(c.id)}"] .component-value`);if(el)el.textContent=format(v);if(v<=0){c.value=0;freezeComp(c);logEvent(`${e.name}: ${c.name} reached 0:00`);full=true}}));
+ if(full){saveAll();render()}
+},200);
+setInterval(saveAll,2000);window.addEventListener("beforeunload",saveAll);
+try{render()}catch(err){
+ console.error("BattleClock startup failed",err);
+ const p=document.getElementById("players");
+ if(p)p.innerHTML=`<article class="timer zero"><div class="name">BattleClock startup error</div><div class="hint">${String(err.message||err)}</div></article>`;
+ toast("BattleClock startup error — open the browser console for details.");
+}
+})();
+</script>
+</body>
+</html>
