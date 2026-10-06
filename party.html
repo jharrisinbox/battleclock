@@ -1,23 +1,38 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>BattleClock — Party View</title>
-<style>:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#10141b;color:#eef3f8}main{width:min(720px,calc(100% - 32px));padding:28px;border:1px solid #303947;border-radius:16px;background:#171d26}h1{margin:0 0 8px;font-size:clamp(1.7rem,5vw,2.5rem)}.sub{color:#9ba8b7;margin-bottom:28px}.card{padding:22px;border:1px solid #354152;border-radius:12px;background:#111720}#message{font-size:1.35rem;font-weight:700}#status{margin-top:14px;color:#9ba8b7;font-size:.9rem}.ok{color:#8de5a1!important}.bad{color:#ff9b9b!important}</style>
-</head><body><main><h1>BattleClock</h1><div class="sub">Party View · read only</div><section class="card"><div id="message">Connecting to BattleClock…</div><div id="status">Contacting Supabase</div></section></main>
+<style>
+:root{color-scheme:dark;--bg:#15171a;--panel:#24282d;--panel2:#1c1f23;--text:#f3f4f6;--muted:#aeb4bd;--border:#444b55;--run:#43d17a}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+header{padding:18px 22px;border-bottom:1px solid var(--border);background:var(--panel2);display:flex;justify-content:space-between;gap:12px;align-items:center}
+h1{margin:0;font-size:22px}.sub,.status{color:var(--muted);font-size:12px}.status.live{color:#8de5a1}
+main{max-width:1400px;margin:auto;padding:20px}#players,#entities{display:grid;grid-template-columns:repeat(2,minmax(280px,1fr));gap:16px}
+.player,.entity{background:var(--panel);border:2px solid var(--border);border-radius:16px;padding:15px}.player.running{box-shadow:0 0 22px #43d17a18}
+.head{display:flex;justify-content:space-between;gap:12px;align-items:center}.name{font-size:19px;font-weight:900}.clock{text-align:center;font-variant-numeric:tabular-nums;font-size:clamp(54px,8vw,92px);font-weight:900;line-height:1;margin:14px 0;padding:12px;background:#101214;border-radius:13px}
+.effects{min-height:22px;text-align:center}.chip{display:inline-block;background:#2b2330;border:1px solid #72547e;border-radius:999px;padding:3px 7px;font-size:10px;margin:2px}
+h2{font-size:18px;margin:28px 0 12px}.components{display:grid;gap:8px;margin-top:10px}.component{background:#171a1e;border:1px solid #3a4048;border-radius:10px;padding:9px}.component .label{font-size:10px;color:var(--muted);font-weight:800;text-transform:uppercase}.component .value{font-size:20px;font-weight:900;margin-top:2px}.track{height:7px;background:#0e1012;border-radius:99px;overflow:hidden;margin-top:6px}.fill{height:100%;background:var(--run)}
+.empty{color:var(--muted);padding:20px 0}.mob{color:var(--muted);font-size:12px;font-weight:800}
+@media(max-width:760px){#players,#entities{grid-template-columns:1fr}}
+</style></head><body>
+<header><div><h1>BattleClock</h1><div class="sub">Party View · read only</div></div><div id="connection" class="status">Connecting…</div></header>
+<main><section id="players"></section><h2>Visible Session Entities</h2><section id="entities"></section><div id="empty" class="empty" style="display:none">No public entities currently in play.</div></main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const SUPABASE_URL="https://ljqkmbngpdvgwfzgbmxp.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY="sb_publishable_IwmRcJDgcBD40snvuUgN6g_Uct68Vvn";
-const SESSION_ID="main";
-const client=supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
-const messageEl=document.getElementById("message"),statusEl=document.getElementById("status");
-function showState(state){messageEl.textContent=state?.message||"BattleClock session is live."}
-async function loadSession(){
- const {data,error}=await client.from("battleclock_sessions").select("public_state, updated_at").eq("session_id",SESSION_ID).single();
- if(error){console.error(error);messageEl.textContent="Could not load BattleClock.";statusEl.textContent=error.message;statusEl.className="bad";return}
- showState(data.public_state);statusEl.textContent="Connected · live updates enabled";statusEl.className="ok";
+const URL="https://ljqkmbngpdvgwfzgbmxp.supabase.co",KEY="sb_publishable_IwmRcJDgcBD40snvuUgN6g_Uct68Vvn",SESSION="main";
+const sb=supabase.createClient(URL,KEY),players=document.getElementById("players"),entities=document.getElementById("entities"),connection=document.getElementById("connection");
+let state=null,receivedAt=0;
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=x=>{x=Math.max(0,Math.floor(Number(x)||0));return Math.floor(x/60)+":"+String(x%60).padStart(2,"0")};
+function currentPlayer(p){if(!p.running)return Math.max(0,Number(p.remaining)||0);return Math.max(0,(Number(p.remaining)||0)-((Date.now()-receivedAt)/1000)*(Number(p.rate)||1))}
+function render(){
+ if(!state?.players){players.innerHTML='<div class="empty">Waiting for the DM dashboard to publish…</div>';entities.innerHTML="";return}
+ players.innerHTML=state.players.map(p=>`<article class="player ${p.running?"running":""}" style="border-color:${esc(p.color||"#444b55")}"><div class="head"><div class="name">${esc(p.name)}</div><div class="mob">${p.running?"● RUNNING":"STOPPED"}</div></div><div class="clock" data-player="${esc(p.id)}">${fmt(currentPlayer(p))}</div><div class="effects">${(p.effects||[]).map(x=>`<span class="chip">${esc(x.name)}</span>`).join("")}</div></article>`).join("");
+ const es=state.entities||[];document.getElementById("empty").style.display=es.length?"none":"block";
+ entities.innerHTML=es.map(e=>`<article class="entity"><div class="head"><div><div class="name">${esc(e.name)}</div><div class="sub">${esc(e.type)}${e.type==="Mob"?` · ×${Number(e.quantity)||1}`:""}</div></div></div><div class="components">${(e.components||[]).map(c=>`<div class="component"><div class="label">${esc(c.name)}</div><div class="value" data-entity="${esc(e.id)}" data-comp="${esc(c.id)}">${c.kind==="timer"?fmt(c.value):c.kind==="resource"?`${esc(c.value)} / ${esc(c.max)}`:esc(c.value)}</div>${c.kind==="resource"?`<div class="track"><div class="fill" style="width:${Math.max(0,Math.min(100,(Number(c.max)?Number(c.value)/Number(c.max)*100:0)))}%"></div></div>`:""}</div>`).join("")}</div></article>`).join("")
 }
-client.channel("battleclock-party-main").on("postgres_changes",{event:"UPDATE",schema:"public",table:"battleclock_sessions",filter:"session_id=eq."+SESSION_ID},payload=>{
- showState(payload.new.public_state);statusEl.textContent="Live · updated "+new Date().toLocaleTimeString();statusEl.className="ok";
-}).subscribe(status=>{if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"){statusEl.textContent="Loaded, but live update connection failed.";statusEl.className="bad"}});
-loadSession();
+function accept(row){state=row?.public_state||null;receivedAt=Number(state?.published_at)||Date.now();connection.textContent="● LIVE";connection.className="status live";render()}
+async function load(){const {data,error}=await sb.from("battleclock_sessions").select("public_state").eq("session_id",SESSION).single();if(error){connection.textContent="Connection error";console.error(error);return}accept(data)}
+sb.channel("party-main").on("postgres_changes",{event:"UPDATE",schema:"public",table:"battleclock_sessions",filter:"session_id=eq."+SESSION},p=>accept(p.new)).subscribe();
+setInterval(load,3000);setInterval(()=>{if(!state)return;(state.players||[]).forEach(p=>{const el=document.querySelector(`[data-player="${CSS.escape(p.id)}"]`);if(el)el.textContent=fmt(currentPlayer(p))});(state.entities||[]).forEach(e=>(e.components||[]).forEach(c=>{if(c.kind!=="timer"||!c.running)return;const el=document.querySelector(`[data-entity="${CSS.escape(e.id)}"][data-comp="${CSS.escape(c.id)}"]`);if(el)el.textContent=fmt(Math.max(0,Number(c.value)-(Date.now()-receivedAt)/1000))}))},250);
+load();
 </script></body></html>
