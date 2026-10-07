@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BattleClock v0.4 Party Sync</title>
+<title>BattleClock v0.5 Encounter</title>
 <style>
 :root{--bg:#15171a;--panel:#24282d;--panel2:#1c1f23;--text:#f3f4f6;--muted:#aeb4bd;--border:#444b55;--run:#43d17a;--danger:#ff5c5c}
 *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
@@ -86,11 +86,17 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 .party-status{font-size:11px;font-weight:800;padding:7px 9px;border:1px solid var(--border);border-radius:9px;color:var(--muted)}
 .party-status.live{color:#8de5a1;border-color:#3f7650}.party-status.error{color:#ff9b9b;border-color:#7a4141}
 #partyAuthDialog input[type=email],#partyAuthDialog input[type=password]{width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:#14171a;color:var(--text)}
+
+.timeline-panel{margin:18px 0;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px}
+.timeline-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}
+.timeline-list{display:grid;gap:8px}.timeline-row{display:grid;grid-template-columns:minmax(150px,1fr) 92px auto;gap:8px;align-items:center;background:#171a1e;border:1px solid #343a42;border-radius:10px;padding:9px}
+.timeline-row.due{border-color:#b94949;box-shadow:0 0 18px #b9494933}.timeline-name{font-weight:900}.timeline-meta{font-size:10px;color:var(--muted);margin-top:2px}.timeline-clock{font:900 22px ui-monospace,SFMono-Regular,Menlo,monospace;text-align:center}.timeline-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.timeline-actions button{padding:6px 8px;font-size:10px}
+.timeline-public{color:#8de5a1}.timeline-private{color:#c2a7ff}.global-paused{color:#ffd37a!important;border-color:#8a6a28!important}
 </style>
 </head>
 <body>
 <header>
-<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.4 Party Sync</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
+<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.5 Encounter</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
 <div class="header-buttons">
 <span id="partyStatus" class="party-status">PARTY VIEW OFFLINE</span>
 <button id="partyConnect">CONNECT PARTY VIEW</button>
@@ -102,9 +108,14 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 <main>
 <section id="players"></section>
 <section class="dice-panel"><strong>DM DICE</strong><div class="sub">Electronic rolls for NPCs, mobs, traps and hazards only.</div><div class="dice-controls" id="quickDice"><button data-die="4">d4</button><button data-die="6">d6</button><button data-die="8">d8</button><button data-die="10">d10</button><button data-die="12">d12</button><button data-die="20" class="die-selected">d20</button><button data-die="100">d100</button><label>Qty <input id="diceQty" type="number" min="1" max="100" value="1"></label><label>Mod <input id="diceMod" type="number" value="0"></label><button id="diceRoll" type="button">ROLL</button></div><div id="diceExpression" class="dice-expression">1d20</div><div id="diceResult" class="dice-result">Ready.</div></section>
+<section class="timeline-panel">
+<div class="timeline-head"><div><strong>ENCOUNTER TIMELINE</strong><div class="sub">Recurring mob initiative, hazards, reinforcements, and scheduled events.</div></div><button id="addTimelineEvent" class="primary">+ EVENT</button></div>
+<div id="timelineList" class="timeline-list"></div>
+<div id="emptyTimeline" class="empty" style="display:none">No encounter events. Add one for initiative, hazards, reinforcements, or anything else that should happen on a clock.</div>
+</section>
 <div class="custom-title"><h2>Session Entities</h2><span class="sub">Build NPCs, objectives, hazards, machines, effects, or other session mechanics from reusable components.</span></div>
 <section id="entities"></section><div id="hiddenEntities" class="hidden-panel" style="display:none"><strong>HIDDEN / STAGED ENTITIES</strong><div class="sub">Prepared entities hidden from the active session area.</div><div id="hiddenEntityList" class="hidden-list"></div></div><div id="emptyEntities" class="empty">No session entities yet. Use + ADD ENTITY to build one.</div><section class="event-panel"><div class="event-head"><h2>Event History</h2><button id="clearEvents">CLEAR</button></div><div id="eventLog" class="event-log"></div></section>
-<div class="footer-note">BattleClock stores the DM game locally in this browser. When Party View is connected, only player clocks/effects and visible session entities are published. Player dice and arithmetic remain manual.</div>
+<div class="footer-note">BattleClock stores the DM game locally in this browser. When Party View is connected, player clocks/effects, visible entity components, and public encounter events are published. Player dice and arithmetic remain manual.</div>
 </main>
 <div id="toast" class="toast"></div>
 
@@ -191,6 +202,16 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 </form>
 </dialog>
 
+
+<dialog id="timelineDialog" class="builder"><form method="dialog" id="timelineForm">
+<h3 id="timelineTitle">Add Encounter Event</h3>
+<label>Name</label><input id="timelineName" type="text" maxlength="60" value="Squirrels attack" required>
+<div class="builder-grid"><div><label>First countdown — minutes</label><input id="timelineMinutes" type="number" min="0" max="999" value="2"></div><div><label>Seconds</label><input id="timelineSeconds" type="number" min="0" max="59" value="0"></div></div>
+<div class="builder-grid"><div><label class="check"><input id="timelineRepeat" type="checkbox" checked> Repeat after acknowledgement</label></div><div><label class="check"><input id="timelinePublic" type="checkbox" checked> Show on Party View</label></div></div>
+<label>Associated entity (optional)</label><select id="timelineEntity"><option value="">— none —</option></select>
+<div class="hint">When the countdown reaches zero it stays DUE until you acknowledge it. Recurring events reset to their interval when acknowledged.</div>
+<div class="dialog-buttons"><button value="cancel">Cancel</button><button value="default" class="primary">Save Event</button></div>
+</form></dialog>
 <dialog id="partyAuthDialog">
 <form method="dialog" id="partyAuthForm">
 <h3>Connect Party View</h3>
@@ -217,6 +238,14 @@ while(timers.length<4)timers.push(makeTimer(`Player ${timers.length+1}`,true));
 timers=timers.map((t,i)=>({...t,primary:true,name:t.name||`Player ${i+1}`,color:t.color||"#43d17a"}));
 
 let entities=loadEntities();
+const TIMELINE_KEY="battleClock_timeline_v05";
+let timeline=loadTimeline(), editingTimelineId=null, globalPaused=false;
+function loadTimeline(){try{return JSON.parse(localStorage.getItem(TIMELINE_KEY)||"[]").map(x=>({...x,running:false,startedAt:null,startRemaining:null}))}catch(e){return[]}}
+function saveTimeline(){localStorage.setItem(TIMELINE_KEY,JSON.stringify(timeline))}
+function timelineEffective(x,now=Date.now()){if(!x.running)return Math.max(0,Number(x.remaining)||0);return Math.max(0,(Number(x.startRemaining)||0)-((now-x.startedAt)/1000))}
+function freezeTimeline(x){x.remaining=timelineEffective(x);x.running=false;x.startedAt=null;x.startRemaining=null}
+function startTimeline(x){if((Number(x.remaining)||0)<=0)x.remaining=Number(x.interval)||0;if(x.remaining>0){x.running=true;x.startedAt=Date.now();x.startRemaining=x.remaining}}
+
 
 /* Party View sync — public snapshot only */
 const SUPABASE_URL="https://ljqkmbngpdvgwfzgbmxp.supabase.co";
@@ -228,7 +257,7 @@ let partyConnected=false,partyPublishing=false,partyPublishPending=false,lastPar
 function publicSnapshot(){
  const now=Date.now();
  return{
-  version:1,published_at:now,
+  version:2,published_at:now,
   players:timers.map(t=>({
    id:t.id,name:t.name,color:t.color||"#43d17a",
    remaining:effective(t,now),running:!!t.running,rate:timeRate(t),
@@ -239,10 +268,16 @@ function publicSnapshot(){
    components:(e.components||[]).map(c=>({
     id:c.id,name:c.name,kind:c.kind,
     value:c.kind==="timer"?compEffective(c,now):c.value,
-    max:c.kind==="resource"?c.max:undefined,running:c.kind==="timer"?!!c.running:undefined
+    max:c.kind==="resource"?c.max:undefined,running:c.kind==="timer"?!!c.running:undefined,
+    rate:c.kind==="timer"?1:undefined
    })),
    effects:(e.effects||[]).map(x=>({name:x.name,mode:x.mode,amount:Number(x.amount)||0,remainingDuration:Number(x.remainingDuration??x.duration)||0}))
-  }))
+  })),
+  timeline:timeline.filter(x=>x.public!==false).map(x=>({
+   id:x.id,name:x.name,entityId:x.entityId||"",remaining:timelineEffective(x,now),
+   running:!!x.running,repeat:!!x.repeat,interval:Number(x.interval)||0,due:timelineEffective(x,now)<=0
+  })),
+  globalPaused
  }
 }
 function setPartyStatus(text,cls=""){const el=document.getElementById("partyStatus");if(!el)return;el.textContent=text;el.className="party-status"+(cls?" "+cls:"")}
@@ -400,9 +435,29 @@ function render(){
  visible.forEach(x=>e.append(entityCard(x)));
  hidden.forEach(x=>{const chip=document.createElement("div");chip.className="hidden-chip";const label=document.createElement("span");label.textContent=`${x.name} (${x.type})`;chip.append(label,button("SHOW","",()=>setEntityVisibility(x,true)));hl.append(chip)});
  hp.style.display=hidden.length?"block":"none";
- document.getElementById("emptyEntities").style.display=visible.length?"none":"block";renderEvents();
+ document.getElementById("emptyEntities").style.display=visible.length?"none":"block";renderEvents();renderTimeline();
 }
-function saveAll(){
+
+function renderTimeline(){
+ const list=document.getElementById("timelineList"),empty=document.getElementById("emptyTimeline");if(!list)return;list.innerHTML="";empty.style.display=timeline.length?"none":"block";
+ [...timeline].sort((a,b)=>timelineEffective(a)-timelineEffective(b)).forEach(x=>{
+  const row=document.createElement("div");row.className="timeline-row"+(timelineEffective(x)<=0?" due":"");row.dataset.timelineId=x.id;
+  const info=document.createElement("div");info.innerHTML=`<div class="timeline-name">${escapeHtml(x.name)}</div><div class="timeline-meta ${x.public!==false?"timeline-public":"timeline-private"}">${x.public!==false?"PUBLIC":"DM ONLY"}${x.repeat?` · repeats ${format(x.interval)}`:""}${x.entityId?` · ${escapeHtml(entities.find(e=>e.id===x.entityId)?.name||"entity")}`:""}</div>`;
+  const clock=document.createElement("div");clock.className="timeline-clock";clock.textContent=timelineEffective(x)<=0?"DUE":format(timelineEffective(x));
+  const acts=document.createElement("div");acts.className="timeline-actions";
+  acts.append(button("−30","",()=>adjustTimeline(x,-30)),button(x.running?"PAUSE":"START","",()=>toggleTimeline(x)),button("+30","",()=>adjustTimeline(x,30)));
+  if(timelineEffective(x)<=0)acts.append(button(x.repeat?"ACK + RESET":"ACK","primary",()=>ackTimeline(x)));
+  acts.append(button("EDIT","",()=>openTimeline(x)),button("×","danger",()=>deleteTimeline(x)));
+  row.append(info,clock,acts);list.append(row)
+ })
+}
+function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function toggleTimeline(x){if(x.running)freezeTimeline(x);else startTimeline(x);saveAll();renderTimeline()}
+function adjustTimeline(x,d){x.remaining=Math.max(0,timelineEffective(x)+d);if(x.running&&x.remaining>0){x.startedAt=Date.now();x.startRemaining=x.remaining}else if(x.remaining<=0)freezeTimeline(x);saveAll();renderTimeline()}
+function ackTimeline(x){if(x.repeat){x.remaining=x.interval;startTimeline(x);logEvent(`${x.name}: acknowledged; next in ${format(x.interval)}`)}else{x.remaining=0;x.running=false;logEvent(`${x.name}: acknowledged`)}saveAll();renderTimeline()}
+function deleteTimeline(x){if(!confirm(`Delete timeline event "${x.name}"?`))return;timeline=timeline.filter(y=>y.id!==x.id);saveAll();renderTimeline()}
+function openTimeline(x=null){editingTimelineId=x?.id||null;document.getElementById("timelineTitle").textContent=x?"Edit Encounter Event":"Add Encounter Event";document.getElementById("timelineName").value=x?.name||"New event";const secs=x?Math.max(0,Math.round(x.interval||x.remaining||120)):120;document.getElementById("timelineMinutes").value=Math.floor(secs/60);document.getElementById("timelineSeconds").value=secs%60;document.getElementById("timelineRepeat").checked=x?.repeat??true;document.getElementById("timelinePublic").checked=x?.public??true;const sel=document.getElementById("timelineEntity");sel.innerHTML='<option value="">— none —</option>'+entities.map(e=>`<option value="${e.id}">${escapeHtml(e.name)}</option>`).join("");sel.value=x?.entityId||"";document.getElementById("timelineDialog").showModal()}
+function saveAll(){saveTimeline();
  const now=Date.now();const tc=timers.map(t=>t.running?{...t,remaining:effective(t,now)}:{...t});localStorage.setItem(STORAGE_KEY,JSON.stringify(tc));
  const ec=entities.map(e=>({...e,components:(e.components||[]).map(c=>c.kind==="timer"&&c.running?{...c,value:compEffective(c,now)}:{...c})}));localStorage.setItem(ENTITY_KEY,JSON.stringify(ec));
  schedulePartyPublish();
@@ -453,7 +508,9 @@ document.getElementById("addEntity").onclick=()=>openEntityBuilder();
 document.querySelectorAll("[data-add-component]").forEach(b=>b.onclick=()=>addComponentRow(componentDefaults(b.dataset.addComponent)));
 document.getElementById("addActionRow").onclick=()=>addActionRow();
 document.getElementById("entityForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const ent=collectEntity();if(editingEntityId){const i=entities.findIndex(x=>x.id===editingEntityId);entities[i]=ent;logEvent(`${ent.name} updated`)}else{entities.push(ent);logEvent(`${ent.name} added`)}saveAll();render();document.getElementById("entityDialog").close()});
-document.getElementById("pauseAll").onclick=()=>{timers.forEach(t=>t.running&&freeze(t));entities.forEach(e=>e.components.forEach(c=>c.kind==="timer"&&c.running&&freezeComp(c)));logEvent("ALL CLOCKS PAUSED");saveAll();render()};
+document.getElementById("pauseAll").onclick=()=>{timers.forEach(t=>t.running&&freeze(t));entities.forEach(e=>e.components.forEach(c=>c.kind==="timer"&&c.running&&freezeComp(c)));timeline.forEach(x=>x.running&&freezeTimeline(x));globalPaused=true;document.getElementById("partyStatus").classList.add("global-paused");logEvent("ALL CLOCKS + ENCOUNTER EVENTS PAUSED");saveAll();render();renderTimeline()};
+document.getElementById("addTimelineEvent").onclick=()=>openTimeline();
+document.getElementById("timelineForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const interval=Math.max(1,(Number(document.getElementById("timelineMinutes").value)||0)*60+(Number(document.getElementById("timelineSeconds").value)||0));let x=timeline.find(y=>y.id===editingTimelineId);if(!x){x={id:uid(),remaining:interval,running:false,startedAt:null,startRemaining:null};timeline.push(x)}else if(x.running)freezeTimeline(x);x.name=document.getElementById("timelineName").value.trim()||"Event";x.interval=interval;x.repeat=document.getElementById("timelineRepeat").checked;x.public=document.getElementById("timelinePublic").checked;x.entityId=document.getElementById("timelineEntity").value;x.remaining=Math.min(x.remaining||interval,interval);saveAll();renderTimeline();document.getElementById("timelineDialog").close()});
 document.getElementById("clearEvents").onclick=()=>{if(confirm("Clear event history?")){events=[];saveEvents();renderEvents()}};
 document.getElementById("gameSettings").onclick=()=>{document.getElementById("defaultMinutes").value=Math.floor(game.defaultSeconds/60);document.getElementById("defaultSeconds").value=game.defaultSeconds%60;document.getElementById("gameSettingsDialog").showModal()};
 document.getElementById("gameSettingsForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();game.defaultSeconds=Math.max(0,(Number(document.getElementById("defaultMinutes").value)||0)*60+(Number(document.getElementById("defaultSeconds").value)||0));saveGame();if(document.getElementById("applyDefaultPrimary").checked){timers.forEach(t=>{t.remaining=game.defaultSeconds;t.running=false;t.startedAt=null;t.startRemaining=null});document.getElementById("applyDefaultPrimary").checked=false}saveAll();render();document.getElementById("gameSettingsDialog").close();toast(`Default player timer set to ${format(game.defaultSeconds)}.`)});
@@ -505,10 +562,11 @@ setInterval(()=>{const now=Date.now(),second=Math.floor(now/1000);if(second===la
  if(pulseDelta){const cur=Math.max(0,effective(t,now)+pulseDelta);t.remaining=cur;t.startedAt=now;t.startRemaining=cur;if(cur<=0){freeze(t);notifyZero(t)}full=true}
  const v=effective(t,now);const card=document.querySelector(`[data-timer-id="${CSS.escape(t.id)}"]`);if(card){card.querySelector(".clock").textContent=format(v)}if(v<=0){t.remaining=0;freeze(t);notifyZero(t);full=true}});
  entities.forEach(e=>e.components.forEach(c=>{if(c.kind!=="timer"||!c.running)return;const v=compEffective(c,now);const el=document.querySelector(`[data-entity-id="${CSS.escape(e.id)}"] [data-comp-id="${CSS.escape(c.id)}"] .component-value`);if(el)el.textContent=format(v);if(v<=0){c.value=0;freezeComp(c);logEvent(`${e.name}: ${c.name} reached 0:00`);full=true}}));
- if(full){saveAll();render()} schedulePartyPublish();
+ timeline.forEach(x=>{if(!x.running)return;const v=timelineEffective(x,now);const row=document.querySelector(`[data-timeline-id="${CSS.escape(x.id)}"]`);if(row){const cl=row.querySelector(".timeline-clock");if(cl)cl.textContent=v<=0?"DUE":format(v)}if(v<=0){x.remaining=0;freezeTimeline(x);logEvent(`${x.name}: DUE`);full=true}});
+ if(full){saveAll();render();renderTimeline()} schedulePartyPublish();
 },200);
 setInterval(saveAll,2000);window.addEventListener("beforeunload",saveAll);
-try{render()}catch(err){
+try{render();renderTimeline()}catch(err){
  console.error("BattleClock startup failed",err);
  const p=document.getElementById("players");
  if(p)p.innerHTML=`<article class="timer zero"><div class="name">BattleClock startup error</div><div class="hint">${String(err.message||err)}</div></article>`;
