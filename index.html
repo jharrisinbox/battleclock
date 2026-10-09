@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BattleClock v0.5 Encounter</title>
+<title>BattleClock v0.6 Player-Time</title>
 <style>
 :root{--bg:#15171a;--panel:#24282d;--panel2:#1c1f23;--text:#f3f4f6;--muted:#aeb4bd;--border:#444b55;--run:#43d17a;--danger:#ff5c5c}
 *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
@@ -92,16 +92,32 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 .timeline-list{display:grid;gap:8px}.timeline-row{display:grid;grid-template-columns:minmax(150px,1fr) 92px auto;gap:8px;align-items:center;background:#171a1e;border:1px solid #343a42;border-radius:10px;padding:9px}
 .timeline-row.due{border-color:#b94949;box-shadow:0 0 18px #b9494933}.timeline-name{font-weight:900}.timeline-meta{font-size:10px;color:var(--muted);margin-top:2px}.timeline-clock{font:900 22px ui-monospace,SFMono-Regular,Menlo,monospace;text-align:center}.timeline-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.timeline-actions button{padding:6px 8px;font-size:10px}
 .timeline-public{color:#8de5a1}.timeline-private{color:#c2a7ff}.global-paused{color:#ffd37a!important;border-color:#8a6a28!important}
+
+/* v0.6 */
+.state-switch{border-radius:999px!important;padding:7px 11px!important;font-size:10px!important;letter-spacing:.04em}
+.state-switch.on{background:#315d43;border-color:#63a77c}.state-switch.off{background:#4b3434;border-color:#875454}
+.turn-strip{display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;margin:5px 0 7px}
+.turn-rate{font-size:10px;color:var(--muted)}
+.cooldown{font:800 10px ui-monospace,SFMono-Regular,Menlo,monospace;padding:2px 6px;border-radius:999px;background:#282e35;border:1px solid #48515c;margin-left:5px}
+.cooldown.ready{color:#8de5a1;border-color:#3f7650}.cooldown.wait{color:#ffd37a;border-color:#78652f}
+.mob-hp{margin:10px 0;padding:8px;background:#171a1e;border:1px solid #343a42;border-radius:10px}
+.mob-hp-row{display:grid;grid-template-columns:28px 1fr 58px;gap:7px;align-items:center;margin:5px 0;cursor:pointer}
+.mob-hp-row.selected{outline:1px solid #8ba7c7;border-radius:6px;padding:3px}
+.mob-hp-row.down{opacity:.45}.mob-hp-track{height:10px;background:#0d1013;border-radius:99px;overflow:hidden}.mob-hp-fill{height:100%;background:var(--run)}
+.mob-hp-value{font:800 10px ui-monospace,monospace;text-align:right}.mob-hp-controls{display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px}.mob-hp-controls button{padding:5px 7px;font-size:10px}
+.group-controls{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 </style>
 </head>
 <body>
 <header>
-<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.5 Encounter</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
+<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.6 Player-Time</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
 <div class="header-buttons">
 <span id="partyStatus" class="party-status">PARTY VIEW OFFLINE</span>
 <button id="partyConnect">CONNECT PARTY VIEW</button>
 <button id="gameSettings">GAME SETTINGS ⚙</button>
-<button id="pauseAll">PAUSE ALL</button>
+<button id="playersToggle" class="state-switch on">PLAYERS · RUNNING</button>
+<button id="eventsToggle" class="state-switch on">EVENTS · RUNNING</button>
+<button id="pauseAll" class="state-switch on">ALL · RUNNING</button>
 <button id="addEntity" class="primary">+ ADD ENTITY</button>
 </div>
 </header>
@@ -151,9 +167,10 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 <div><label>INT</label><input id="statINT" type="number" min="1" max="30"><label>Custom bonus</label><input id="bonusINT" type="number" value="0"></div>
 <div><label>WIS</label><input id="statWIS" type="number" min="1" max="30"><label>Custom bonus</label><input id="bonusWIS" type="number" value="0"></div>
 <div><label>CHA</label><input id="statCHA" type="number" min="1" max="30"><label>Custom bonus</label><input id="bonusCHA" type="number" value="0"></div>
-<div><label>AC</label><input id="statAC" type="number" min="0" max="99"></div>
+<div><label>AC</label><input id="statAC" type="number" min="0" max="99"></div><div><label>ACTIVE rate (%)</label><input id="activeRate" type="number" min="0" max="500" step="5" value="110"></div>
+<div><label>PASSIVE rate (%)</label><input id="passiveRate" type="number" min="0" max="500" step="5" value="10"></div>
 </div>
-<div class="hint">Ability modifiers are calculated automatically. AC is entered directly.</div>
+<div class="hint">Ability modifiers are calculated automatically. ACTIVE/PASSIVE rates control player clock drain. Passive drain is damage-over-time and does not recharge cooldowns.</div>
 <div class="dialog-buttons"><button value="cancel">Cancel</button><button value="default" class="primary">Save</button></div>
 </form></dialog>
 
@@ -240,6 +257,7 @@ timers=timers.map((t,i)=>({...t,primary:true,name:t.name||`Player ${i+1}`,color:
 let entities=loadEntities();
 const TIMELINE_KEY="battleClock_timeline_v05";
 let timeline=loadTimeline(), editingTimelineId=null, globalPaused=false;
+let playersRunning=true,eventsRunning=true,playerPauseSnapshot=new Set(),eventPauseSnapshot=new Set();
 function loadTimeline(){try{return JSON.parse(localStorage.getItem(TIMELINE_KEY)||"[]").map(x=>({...x,running:false,startedAt:null,startRemaining:null}))}catch(e){return[]}}
 function saveTimeline(){localStorage.setItem(TIMELINE_KEY,JSON.stringify(timeline))}
 function timelineEffective(x,now=Date.now()){if(!x.running)return Math.max(0,Number(x.remaining)||0);return Math.max(0,(Number(x.startRemaining)||0)-((now-x.startedAt)/1000))}
@@ -260,11 +278,12 @@ function publicSnapshot(){
   version:2,published_at:now,
   players:timers.map(t=>({
    id:t.id,name:t.name,color:t.color||"#43d17a",
-   remaining:effective(t,now),running:!!t.running,rate:timeRate(t),
+   remaining:effective(t,now),running:!!t.running,rate:timeRate(t),turnState:t.turnState||"active",
+   cooldowns:(t.playerActions||[]).filter(a=>Number(a.cooldown)>0).map(a=>({name:a.name,remaining:Number(a.cooldownRemaining)||0})),
    effects:(t.effects||[]).map(x=>({name:x.name,mode:x.mode,amount:Number(x.amount)||0,remainingDuration:Number(x.remainingDuration??x.duration)||0}))
   })),
   entities:entities.filter(e=>e.visible!==false).map(e=>({
-   id:e.id,name:e.name,type:e.type,quantity:Math.max(1,Number(e.quantity)||1),
+   id:e.id,name:e.name,type:e.type,quantity:Math.max(1,Number(e.quantity)||1),mobHP:Array.isArray(e.mobHP)?e.mobHP:[],mobHPMax:Number(e.mobHPMax)||0,
    components:(e.components||[]).map(c=>({
     id:c.id,name:c.name,kind:c.kind,
     value:c.kind==="timer"?compEffective(c,now):c.value,
@@ -277,7 +296,7 @@ function publicSnapshot(){
    id:x.id,name:x.name,entityId:x.entityId||"",remaining:timelineEffective(x,now),
    running:!!x.running,repeat:!!x.repeat,interval:Number(x.interval)||0,due:timelineEffective(x,now)<=0
   })),
-  globalPaused
+  globalPaused,playersRunning,eventsRunning
  }
 }
 function setPartyStatus(text,cls=""){const el=document.getElementById("partyStatus");if(!el)return;el.textContent=text;el.className="party-status"+(cls?" "+cls:"")}
@@ -305,11 +324,13 @@ async function restorePartySession(){
 
 
 function uid(){return (globalThis.crypto&&crypto.randomUUID)?crypto.randomUUID():String(Date.now()+Math.random())}
-function makeTimer(name,primary=false){return{id:uid(),name,primary,color:"#43d17a",remaining:game.defaultSeconds,running:false,startedAt:null,startRemaining:null,zeroNotified:false,playerActions:[],stats:{STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},effects:[]}}
-function timeRate(t){return Math.max(0,(t.effects||[]).filter(x=>x.mode==="rate").reduce((v,x)=>v+(Number(x.amount)||0),1))}
+function makeTimer(name,primary=false){return{id:uid(),name,primary,color:"#43d17a",remaining:game.defaultSeconds,running:false,startedAt:null,startRemaining:null,zeroNotified:false,turnState:"active",activeRate:1.10,passiveRate:0.10,playerActions:[],stats:{STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},effects:[]}}
+function baseTurnRate(t){return t.turnState==="passive"?(Number(t.passiveRate)??.10):(Number(t.activeRate)??1.10)}
+function timeRate(t){return Math.max(0,(t.effects||[]).filter(x=>x.mode==="rate").reduce((v,x)=>v+(Number(x.amount)||0),baseTurnRate(t)))}
+function toggleTurnState(t){if(t.running)freeze(t);t.turnState=t.turnState==="active"?"passive":"active";if(t.remaining>0&&playersRunning){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining}logEvent(`${t.name}: ${t.turnState.toUpperCase()} state`);saveAll();render()}
 function effective(t,now=Date.now()){if(!t.running)return Math.max(0,t.remaining);return Math.max(0,t.startRemaining-((now-t.startedAt)/1000)*timeRate(t))}
 function freeze(t){t.remaining=effective(t);t.running=false;t.startedAt=null;t.startRemaining=null}
-function toggle(t){if(t.running){freeze(t);logEvent(`${t.name} stopped at ${format(t.remaining)}`)}else if(t.remaining>0){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining;logEvent(`${t.name} started at ${format(t.remaining)}`)}saveAll();render()}
+function toggle(t){if(t.running){freeze(t);logEvent(`${t.name} stopped at ${format(t.remaining)}`)}else if(t.remaining>0&&playersRunning){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining;logEvent(`${t.name} started at ${format(t.remaining)}`)}saveAll();render()}
 function adjust(t,seconds){const next=Math.max(0,effective(t)+seconds);t.remaining=next;if(t.running&&next>0){t.startedAt=Date.now();t.startRemaining=next}else if(next<=0){freeze(t);t.remaining=0}saveAll();logEvent(`${t.name} ${seconds>0?"+":""}${seconds}s → ${format(next)}`);if(next===0)notifyZero(t);render()}
 function reset(t){if(!confirm(`Reset ${t.name} to ${format(game.defaultSeconds)}?`))return;t.remaining=game.defaultSeconds;t.running=false;t.startedAt=null;t.startRemaining=null;t.zeroNotified=false;logEvent(`${t.name} reset to ${format(game.defaultSeconds)}`);saveAll();render()}
 function setTime(t,seconds){t.remaining=Math.max(0,seconds);t.running=false;t.startedAt=null;t.startRemaining=null;t.zeroNotified=false;logEvent(`${t.name} set to ${format(seconds)}`);saveAll();render()}
@@ -329,6 +350,7 @@ function timerCard(t){
  ["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>{const z=document.createElement("div");z.className="ability";const mod=Math.floor((Number(stats[k])-10)/2);const bonus=Number(stats["bonus"+k])||0;z.innerHTML=`<b>${k}</b><span>${stats[k]} ${mod>=0?"+":""}${mod} <small>(${bonus>=0?"+":""}${bonus})</small></span>`;statWrap.append(z)});
  const ac=document.createElement("div");ac.className="ability";ac.innerHTML=`<b>AC</b><span>🛡 ${stats.AC}</span>`;statWrap.append(ac);
  const statEdit=button("EDIT STATS","stats-edit",()=>openPlayerStats(t));
+ const turn=document.createElement("div");turn.className="turn-strip";const ts=button(t.turnState==="passive"?"PASSIVE · NOT MY TURN":"ACTIVE · MY TURN","state-switch "+(t.turnState==="passive"?"off":"on"),()=>toggleTurnState(t));const tr=document.createElement("span");tr.className="turn-rate";tr.textContent=`ACTIVE ${Math.round((Number(t.activeRate)||1.1)*100)}% · PASSIVE ${Math.round((Number(t.passiveRate)??.1)*100)}%`;turn.append(ts,tr);
  const clock=document.createElement("div");clock.className="clock";clock.textContent=format(sec);clock.title="Click to start or stop";clock.onclick=()=>toggle(t);
  const controls=document.createElement("div");controls.className="controls";
  [-30,-15,-10,-5].forEach(x=>controls.append(button(`−${Math.abs(x)}`,"adjust",()=>adjust(t,x))));
@@ -336,7 +358,7 @@ function timerCard(t){
  [5,10,15,30].forEach(x=>controls.append(button(`+${x}`,"adjust",()=>adjust(t,x))));
  const effectsLine=document.createElement("div");effectsLine.className="effects-line";const rate=timeRate(t);if(rate!==1){const b=document.createElement("span");b.className="effect-badge";b.textContent=`⏱ ${rate.toFixed(2)}×`;effectsLine.append(b)}(t.effects||[]).forEach(x=>{const b=document.createElement("span");b.className="effect-badge";b.textContent=`${x.name}${x.duration>0?` ${format(x.remainingDuration??x.duration)}`:""}`;effectsLine.append(b)});
  const secondary=document.createElement("div");secondary.className="secondary";secondary.append(button("SET TIME","",()=>openSetTime(t)),button("EFFECTS","",()=>openEffects(t)),button(`RESET ${format(game.defaultSeconds)}`,"",()=>reset(t)));
- const pa=document.createElement("div");pa.className="player-actions";const ph=document.createElement("div");ph.className="player-actions-head";ph.innerHTML="<strong>ACTIONS / SPELLS / ITEMS</strong>";ph.append(button("EDIT","",()=>openPlayerActions(t)));pa.append(ph);if((t.playerActions||[]).length){const pl=document.createElement("div");pl.className="player-action-list";t.playerActions.forEach(a=>pl.append(playerActionView(t,a)));pa.append(pl)}card.append(head,statWrap,statEdit,clock,effectsLine,controls,secondary,pa);return card
+ const pa=document.createElement("div");pa.className="player-actions";const ph=document.createElement("div");ph.className="player-actions-head";ph.innerHTML="<strong>ACTIONS / SPELLS / ITEMS</strong>";ph.append(button("EDIT","",()=>openPlayerActions(t)));pa.append(ph);if((t.playerActions||[]).length){const pl=document.createElement("div");pl.className="player-action-list";t.playerActions.forEach(a=>pl.append(playerActionView(t,a)));pa.append(pl)}card.append(head,statWrap,statEdit,turn,clock,effectsLine,controls,secondary,pa);return card
 }
 
 function compEffective(c,now=Date.now()){if(c.kind!=="timer"||!c.running)return Math.max(0,Number(c.value)||0);return Math.max(0,(Number(c.startValue)||0)-Math.floor((now-c.startedAt)/1000))}
@@ -356,12 +378,28 @@ function componentView(entity,c){
  return box
 }
 
+
+function ensureMobHP(e){
+ const q=Math.max(1,Number(e.quantity)||1);if(e.type!=="Mob"||q>4)return;
+ const hpComp=(e.components||[]).find(c=>c.kind==="resource"&&/^(hp|health|hit points?)$/i.test(c.name))||(e.components||[]).find(c=>c.kind==="resource");
+ const max=Math.max(1,Number(hpComp?.max)||Number(hpComp?.value)||10),start=Math.max(0,Math.min(max,Number(hpComp?.value)||max));
+ if(!Array.isArray(e.mobHP))e.mobHP=[];while(e.mobHP.length<q)e.mobHP.push(start);e.mobHP=e.mobHP.slice(0,q).map(v=>Math.max(0,Math.min(max,Number(v))));
+ e.mobHP=e.mobHP.map(v=>Math.max(0,Math.min(max,Number(v)||0)));e.mobHPMax=max;e.selectedMob=Math.max(0,Math.min(q-1,Number(e.selectedMob)||0));
+}
+function mobHPView(e){
+ ensureMobHP(e);if(e.type!=="Mob"||Number(e.quantity)>4)return null;
+ const box=document.createElement("div");box.className="mob-hp";const q=Math.max(1,Number(e.quantity)||1),max=Math.max(1,Number(e.mobHPMax)||10);
+ for(let i=0;i<q;i++){const row=document.createElement("div");row.className="mob-hp-row"+(i===e.selectedMob?" selected":"")+(e.mobHP[i]<=0?" down":"");row.onclick=()=>{e.selectedMob=i;saveAll();render()};const lab=document.createElement("b");lab.textContent=`#${i+1}`;const tr=document.createElement("div");tr.className="mob-hp-track";const fill=document.createElement("div");fill.className="mob-hp-fill";fill.style.width=`${Math.max(0,Math.min(100,e.mobHP[i]/max*100))}%`;tr.append(fill);const val=document.createElement("div");val.className="mob-hp-value";val.textContent=e.mobHP[i]<=0?"DOWN":`${e.mobHP[i]}/${max}`;row.append(lab,tr,val);box.append(row)}
+ const ctr=document.createElement("div");ctr.className="mob-hp-controls";[-5,-1,1,5].forEach(d=>ctr.append(button(`${d>0?"+":""}${d}`,"",()=>changeMobHP(e,d))));ctr.append(button("RESET HP","",()=>{e.mobHP=Array(q).fill(max);saveAll();render()}));box.append(ctr);return box
+}
+function changeMobHP(e,d){ensureMobHP(e);const i=e.selectedMob||0,max=Math.max(1,Number(e.mobHPMax)||10);e.mobHP[i]=Math.max(0,Math.min(max,(Number(e.mobHP[i])||0)+d));logEvent(`${e.name} #${i+1} HP ${d>0?"+":""}${d} → ${e.mobHP[i]}/${max}`);saveAll();render()}
+
 function entityCard(e){
  const card=document.createElement("article");card.className="entity-card";card.dataset.entityId=e.id;
  const head=document.createElement("div");head.className="entity-head";
  const left=document.createElement("div");left.innerHTML=`<div class="entity-title"></div><div class="entity-type"></div>`;left.querySelector(".entity-title").textContent=e.name;left.querySelector(".entity-type").textContent=e.type+(e.type==="Mob"?` · ×${Math.max(1,Number(e.quantity)||1)}`:"");
  const tools=document.createElement("div");tools.className="entity-tools";tools.append(button("EFFECTS","",()=>openEntityEffects(e)),button("HIDE","",()=>setEntityVisibility(e,false)),button("EDIT","",()=>openEntityBuilder(e)),button("DELETE","danger",()=>deleteEntity(e)));head.append(left,tools);card.append(head);
- const list=document.createElement("div");list.className="component-list";(e.components||[]).forEach(c=>list.append(componentView(e,c)));if(e.components?.length)card.append(list);
+ const mh=mobHPView(e);if(mh)card.append(mh); const list=document.createElement("div");list.className="component-list";(e.components||[]).forEach(c=>list.append(componentView(e,c)));if(e.components?.length)card.append(list);
  if(e.actions?.length){const actions=document.createElement("div");actions.className="entity-actions";e.actions.forEach(a=>{const wrap=document.createElement("div");wrap.className="entity-action-box";const title=document.createElement("strong");title.textContent=a.name||"ACTION";wrap.append(title);if(a.reference){const r=document.createElement("div");r.className="action-ref";r.textContent=a.reference;wrap.append(r)}const rb=document.createElement("div");rb.className="entity-action-rolls";const result=document.createElement("div");result.className="entity-action-result";
  if(a.attackMod!==""&&a.attackMod!=null){const m=Number(a.attackMod)||0,expr=`1d20${m?`${m>0?"+":""}${m}`:""}`;rb.append(button(`ROLL ATTACK d20${m?`${m>0?"+":""}${m}`:""}`,"",()=>entityInlineRoll(e,a,expr,result)));if(e.type==="Mob"&&Number(e.quantity)>1)rb.append(button(`ROLL ATTACK ×${Math.max(1,Number(e.quantity)||1)}`,"",()=>entityInlineRoll(e,a,expr,result,true)))}
  if(a.damageDice){rb.append(button(`ROLL DAMAGE ${a.damageDice}`,"",()=>entityInlineRoll(e,a,a.damageDice,result)));if(e.type==="Mob"&&Number(e.quantity)>1)rb.append(button(`ROLL DAMAGE ×${Math.max(1,Number(e.quantity)||1)}`,"",()=>entityInlineRoll(e,a,a.damageDice,result,true)))}
@@ -386,25 +424,26 @@ function playerActionView(t,a){
  const remaining=limited?Math.max(0,Number(a.currentUses??a.maxUses)||0):null;
  n.textContent=`${a.kind||"Action"}: ${a.name}`;
  if(limited){const badge=document.createElement("span");badge.className="uses-badge";badge.textContent=`${remaining}/${a.maxUses}`;n.append(badge)}
+ const cdMax=Math.max(0,Number(a.cooldown)||0),cd=Math.max(0,Number(a.cooldownRemaining)||0);if(cdMax){const badge=document.createElement("span");badge.className="cooldown "+(cd<=0?"ready":"wait");badge.textContent=cd<=0?"READY":`CD ${format(cd)}`;n.append(badge)}
  if(a.description){const ib=button("ⓘ","info-btn",()=>x.classList.toggle("tooltip-open"));ib.title="Show description";n.append(ib);const tip=document.createElement("div");tip.className="action-tooltip";tip.textContent=a.description;x.append(n,tip)}else{x.append(n)}
  if(a.reference){const r=document.createElement("div");r.className="player-action-ref";r.textContent=a.reference;x.append(r)}
  const footer=document.createElement("div");footer.className="action-footer";const cost=Number(a.timeCost)||0;footer.append(button(cost?`USE −${cost}s`:"USE","",()=>usePlayerAction(t,a)));
  if(limited)footer.append(button("RESET","",()=>resetPlayerActionUses(t,a)));
  x.append(footer);return x
 }
-function usePlayerAction(t,a){const limited=a.maxUses!==""&&a.maxUses!=null;if(limited&&Number(a.currentUses??a.maxUses)<=0){toast(`${a.name}: no uses remaining.`);return}const cost=Math.max(0,Number(a.timeCost)||0);if(cost)adjust(t,-cost);if(limited)a.currentUses=Math.max(0,Number(a.currentUses??a.maxUses)-1);logEvent(`${t.name}: ${a.name} used — PLAYER ROLL MANUALLY`);saveAll();render()}
+function usePlayerAction(t,a){if(Math.max(0,Number(a.cooldownRemaining)||0)>0){toast(`${a.name}: cooldown ${format(a.cooldownRemaining)} remaining.`);return}const limited=a.maxUses!==""&&a.maxUses!=null;if(limited&&Number(a.currentUses??a.maxUses)<=0){toast(`${a.name}: no uses remaining.`);return}const cost=Math.max(0,Number(a.timeCost)||0);if(cost)adjust(t,-cost);if(limited)a.currentUses=Math.max(0,Number(a.currentUses??a.maxUses)-1);if(Number(a.cooldown)>0)a.cooldownRemaining=Number(a.cooldown);logEvent(`${t.name}: ${a.name} used — PLAYER ROLL MANUALLY`);saveAll();render()}
 function resetPlayerActionUses(t,a){if(a.maxUses===""||a.maxUses==null)return;a.currentUses=Math.max(0,Number(a.maxUses)||0);logEvent(`${t.name}: ${a.name} uses reset to ${a.currentUses}`);saveAll();render()}
 let editingPlayerId=null, editingStatsPlayerId=null;
 function addPlayerActionRow(a={id:uid(),kind:"Action",name:"Action",reference:"",description:"",timeCost:0,maxUses:"",currentUses:""}){
  const h=document.getElementById("playerActionBuilder"),r=document.createElement("div");r.className="builder-row action-row";r.dataset.id=a.id||uid();
  const migratedMax=(a.maxUses!==undefined?a.maxUses:(a.uses??""));const migratedCurrent=(a.currentUses!==undefined?a.currentUses:migratedMax);
- r.innerHTML='<div><label>Type</label><select class="ppa-kind"><option>Action</option><option>Attack</option><option>Spell</option><option>Item</option><option>Ability</option></select></div><div><label>Name</label><input class="ppa-name"></div><div><label>Reference / dice</label><input class="ppa-ref" placeholder="DEX 15 · 8d6 Fire"></div><div><label>Time cost (sec)</label><input class="ppa-time" type="number" min="0"></div><div><label>Current uses</label><input class="ppa-current" type="number" min="0"></div><div><label>Maximum uses (blank = ∞)</label><input class="ppa-max" type="number" min="0"></div><div style="grid-column:1/-1"><label>Description / rules tooltip</label><textarea class="ppa-desc" placeholder="Range, targeting, special rules, effects, reminders..."></textarea></div>';
- r.querySelector(".ppa-kind").value=a.kind||"Action";r.querySelector(".ppa-name").value=a.name||"";r.querySelector(".ppa-ref").value=a.reference||"";r.querySelector(".ppa-time").value=a.timeCost||0;r.querySelector(".ppa-current").value=migratedCurrent;r.querySelector(".ppa-max").value=migratedMax;r.querySelector(".ppa-desc").value=a.description||"";r.append(button("REMOVE","danger",()=>r.remove()));h.append(r)
+ r.innerHTML='<div><label>Type</label><select class="ppa-kind"><option>Action</option><option>Attack</option><option>Spell</option><option>Item</option><option>Ability</option></select></div><div><label>Name</label><input class="ppa-name"></div><div><label>Reference / dice</label><input class="ppa-ref" placeholder="DEX 15 · 8d6 Fire"></div><div><label>Time cost (sec)</label><input class="ppa-time" type="number" min="0"></div><div><label>Cooldown (player sec)</label><input class="ppa-cooldown" type="number" min="0"></div><div><label>Current uses</label><input class="ppa-current" type="number" min="0"></div><div><label>Maximum uses (blank = ∞)</label><input class="ppa-max" type="number" min="0"></div><div style="grid-column:1/-1"><label>Description / rules tooltip</label><textarea class="ppa-desc" placeholder="Range, targeting, special rules, effects, reminders..."></textarea></div>';
+ r.querySelector(".ppa-kind").value=a.kind||"Action";r.querySelector(".ppa-name").value=a.name||"";r.querySelector(".ppa-ref").value=a.reference||"";r.querySelector(".ppa-time").value=a.timeCost||0;r.querySelector(".ppa-cooldown").value=a.cooldown||0;r.querySelector(".ppa-current").value=migratedCurrent;r.querySelector(".ppa-max").value=migratedMax;r.querySelector(".ppa-desc").value=a.description||"";r.append(button("REMOVE","danger",()=>r.remove()));h.append(r)
 }
 function openPlayerActions(t){editingPlayerId=t.id;document.getElementById("playerActionTitle").textContent=`Actions — ${t.name}`;document.getElementById("playerActionBuilder").innerHTML="";(t.playerActions||[]).forEach(addPlayerActionRow);document.getElementById("playerActionDialog").showModal()}
 
 
-function openPlayerStats(t){editingStatsPlayerId=t.id;const st=Object.assign({STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},t.stats||{});document.getElementById("playerStatsTitle").textContent=`Stats — ${t.name}`;["STR","DEX","CON","INT","WIS","CHA","AC"].forEach(k=>document.getElementById("stat"+k).value=st[k]);["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>document.getElementById("bonus"+k).value=Number(st["bonus"+k])||0);document.getElementById("playerStatsDialog").showModal()}
+function openPlayerStats(t){editingStatsPlayerId=t.id;const st=Object.assign({STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},t.stats||{});document.getElementById("playerStatsTitle").textContent=`Stats — ${t.name}`;["STR","DEX","CON","INT","WIS","CHA","AC"].forEach(k=>document.getElementById("stat"+k).value=st[k]);["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>document.getElementById("bonus"+k).value=Number(st["bonus"+k])||0);document.getElementById("activeRate").value=Math.round((Number(t.activeRate)||1.10)*100);document.getElementById("passiveRate").value=Math.round((t.passiveRate!==undefined?Number(t.passiveRate):.10)*100);document.getElementById("playerStatsDialog").showModal()}
 
 
 let editingEffectsEntityId=null;
@@ -446,24 +485,39 @@ function renderTimeline(){
   const clock=document.createElement("div");clock.className="timeline-clock";clock.textContent=timelineEffective(x)<=0?"DUE":format(timelineEffective(x));
   const acts=document.createElement("div");acts.className="timeline-actions";
   acts.append(button("−30","",()=>adjustTimeline(x,-30)),button(x.running?"PAUSE":"START","",()=>toggleTimeline(x)),button("+30","",()=>adjustTimeline(x,30)));
-  if(timelineEffective(x)<=0)acts.append(button(x.repeat?"ACK + RESET":"ACK","primary",()=>ackTimeline(x)));
+  if(timelineEffective(x)<=0)acts.append(button(x.repeat?"RESET & START":"RESET","primary",()=>resetTimeline(x)));
   acts.append(button("EDIT","",()=>openTimeline(x)),button("×","danger",()=>deleteTimeline(x)));
   row.append(info,clock,acts);list.append(row)
  })
 }
 function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-function toggleTimeline(x){if(x.running)freezeTimeline(x);else startTimeline(x);saveAll();renderTimeline()}
+function toggleTimeline(x){if(x.running)freezeTimeline(x);else if(eventsRunning)startTimeline(x);saveAll();renderTimeline()}
 function adjustTimeline(x,d){x.remaining=Math.max(0,timelineEffective(x)+d);if(x.running&&x.remaining>0){x.startedAt=Date.now();x.startRemaining=x.remaining}else if(x.remaining<=0)freezeTimeline(x);saveAll();renderTimeline()}
-function ackTimeline(x){if(x.repeat){x.remaining=x.interval;startTimeline(x);logEvent(`${x.name}: acknowledged; next in ${format(x.interval)}`)}else{x.remaining=0;x.running=false;logEvent(`${x.name}: acknowledged`)}saveAll();renderTimeline()}
+function resetTimeline(x){x.remaining=x.interval;x.running=false;x.startedAt=null;x.startRemaining=null;if(x.repeat&&eventsRunning)startTimeline(x);logEvent(`${x.name}: reset to ${format(x.interval)}`);saveAll();renderTimeline()}
 function deleteTimeline(x){if(!confirm(`Delete timeline event "${x.name}"?`))return;timeline=timeline.filter(y=>y.id!==x.id);saveAll();renderTimeline()}
 function openTimeline(x=null){editingTimelineId=x?.id||null;document.getElementById("timelineTitle").textContent=x?"Edit Encounter Event":"Add Encounter Event";document.getElementById("timelineName").value=x?.name||"New event";const secs=x?Math.max(0,Math.round(x.interval||x.remaining||120)):120;document.getElementById("timelineMinutes").value=Math.floor(secs/60);document.getElementById("timelineSeconds").value=secs%60;document.getElementById("timelineRepeat").checked=x?.repeat??true;document.getElementById("timelinePublic").checked=x?.public??true;const sel=document.getElementById("timelineEntity");sel.innerHTML='<option value="">— none —</option>'+entities.map(e=>`<option value="${e.id}">${escapeHtml(e.name)}</option>`).join("");sel.value=x?.entityId||"";document.getElementById("timelineDialog").showModal()}
+
+function setPlayersRunning(on){
+ if(on===playersRunning)return;playersRunning=on;
+ if(!on){playerPauseSnapshot=new Set(timers.filter(t=>t.running).map(t=>t.id));timers.forEach(t=>t.running&&freeze(t))}
+ else{timers.forEach(t=>{if(playerPauseSnapshot.has(t.id)&&t.remaining>0){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining}});playerPauseSnapshot.clear()}
+ globalPaused=!playersRunning&&!eventsRunning;updateGroupButtons();logEvent(`PLAYER CLOCKS ${on?"RESUMED":"PAUSED"}`);saveAll();render()
+}
+function setEventsRunning(on){
+ if(on===eventsRunning)return;eventsRunning=on;
+ if(!on){eventPauseSnapshot=new Set(timeline.filter(x=>x.running).map(x=>x.id));timeline.forEach(x=>x.running&&freezeTimeline(x))}
+ else{timeline.forEach(x=>{if(eventPauseSnapshot.has(x.id)&&x.remaining>0)startTimeline(x)});eventPauseSnapshot.clear()}
+ globalPaused=!playersRunning&&!eventsRunning;updateGroupButtons();logEvent(`EVENT TIMERS ${on?"RESUMED":"PAUSED"}`);saveAll();renderTimeline()
+}
+function updateGroupButtons(){const pb=document.getElementById("playersToggle"),eb=document.getElementById("eventsToggle"),ab=document.getElementById("pauseAll");if(pb){pb.textContent=`PLAYERS · ${playersRunning?"RUNNING":"PAUSED"}`;pb.className="state-switch "+(playersRunning?"on":"off")}if(eb){eb.textContent=`EVENTS · ${eventsRunning?"RUNNING":"PAUSED"}`;eb.className="state-switch "+(eventsRunning?"on":"off")}if(ab){const all=playersRunning&&eventsRunning;ab.textContent=`ALL · ${all?"RUNNING":"PAUSED"}`;ab.className="state-switch "+(all?"on":"off")}}
+
 function saveAll(){saveTimeline();
  const now=Date.now();const tc=timers.map(t=>t.running?{...t,remaining:effective(t,now)}:{...t});localStorage.setItem(STORAGE_KEY,JSON.stringify(tc));
  const ec=entities.map(e=>({...e,components:(e.components||[]).map(c=>c.kind==="timer"&&c.running?{...c,value:compEffective(c,now)}:{...c})}));localStorage.setItem(ENTITY_KEY,JSON.stringify(ec));
  schedulePartyPublish();
 }
-function loadTimers(){try{let raw=localStorage.getItem(STORAGE_KEY)||localStorage.getItem("battleClock_v01")||localStorage.getItem("playerTimePool_v2");if(!raw)return null;return JSON.parse(raw).map(t=>({...t,primary:!!t.primary,color:t.color||"#43d17a",running:false,startedAt:null,startRemaining:null,playerActions:Array.isArray(t.playerActions)?t.playerActions.map(a=>({...a,maxUses:a.maxUses!==undefined?a.maxUses:(a.uses??""),currentUses:a.currentUses!==undefined?a.currentUses:(a.maxUses!==undefined?a.maxUses:(a.uses??"")),description:a.description||""})):[],stats:Object.assign({STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},t.stats||{}),effects:Array.isArray(t.effects)?t.effects.map(x=>({...x,remainingDuration:Number(x.remainingDuration??x.duration)||0,pulseElapsed:Number(x.pulseElapsed)||0})):[]}))}catch(e){return null}}
-function loadEntities(){try{return (JSON.parse(localStorage.getItem(ENTITY_KEY)||"[]")||[]).map(e=>({...e,visible:e.visible!==false,quantity:Math.max(1,Number(e.quantity)||1),effects:Array.isArray(e.effects)?e.effects:[],components:(e.components||[]).map(c=>({...c,running:false,startedAt:null,startValue:null}))}))}catch(e){return[]}}
+function loadTimers(){try{let raw=localStorage.getItem(STORAGE_KEY)||localStorage.getItem("battleClock_v01")||localStorage.getItem("playerTimePool_v2");if(!raw)return null;return JSON.parse(raw).map(t=>({...t,primary:!!t.primary,color:t.color||"#43d17a",running:false,startedAt:null,startRemaining:null,turnState:t.turnState||"active",activeRate:Number(t.activeRate) || 1.10,passiveRate:t.passiveRate!==undefined?Number(t.passiveRate):0.10,playerActions:Array.isArray(t.playerActions)?t.playerActions.map(a=>({...a,cooldown:Number(a.cooldown)||0,cooldownRemaining:Number(a.cooldownRemaining)||0,maxUses:a.maxUses!==undefined?a.maxUses:(a.uses??""),currentUses:a.currentUses!==undefined?a.currentUses:(a.maxUses!==undefined?a.maxUses:(a.uses??"")),description:a.description||""})):[],stats:Object.assign({STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},t.stats||{}),effects:Array.isArray(t.effects)?t.effects.map(x=>({...x,remainingDuration:Number(x.remainingDuration??x.duration)||0,pulseElapsed:Number(x.pulseElapsed)||0})):[]}))}catch(e){return null}}
+function loadEntities(){try{return (JSON.parse(localStorage.getItem(ENTITY_KEY)||"[]")||[]).map(e=>({...e,visible:e.visible!==false,quantity:Math.max(1,Number(e.quantity)||1),effects:Array.isArray(e.effects)?e.effects:[],mobHP:Array.isArray(e.mobHP)?e.mobHP:[],selectedMob:Number(e.selectedMob)||0,mobHPMax:Number(e.mobHPMax)||0,components:(e.components||[]).map(c=>({...c,running:false,startedAt:null,startValue:null}))}))}catch(e){return[]}}
 function loadGame(){try{return Object.assign({defaultSeconds:20*60},JSON.parse(localStorage.getItem(GAME_KEY)||localStorage.getItem("battleClock_game_v01")||"{}"))}catch(e){return{defaultSeconds:20*60}}}
 function saveGame(){localStorage.setItem(GAME_KEY,JSON.stringify(game))}
 function loadEvents(){try{return JSON.parse(localStorage.getItem(EVENT_KEY)||localStorage.getItem("battleClock_events_v01")||"[]")}catch(e){return[]}}
@@ -499,7 +553,7 @@ function collectEntity(){
  const old=editingEntityId?entities.find(e=>e.id===editingEntityId):null;const components=[];
  document.querySelectorAll("#componentBuilder .builder-row").forEach(row=>{const kind=row.dataset.kind,name=row.querySelector(".bc-name").value.trim()||kind,valueRaw=row.querySelector(".bc-value").value;let c={id:row.dataset.id,kind,name};if(kind==="timer"){c.value=parseTime(valueRaw);c.running=false;c.startedAt=null;c.startValue=null}else if(["counter","resource"].includes(kind)){c.value=Number(valueRaw)||0;if(kind==="resource"){c.max=Math.max(0,Number(row.querySelector(".bc-max").value)||0);c.value=Math.max(0,Math.min(c.max,c.value))}}else c.value=valueRaw;c=Object.assign(c,old?.components?.find(x=>x.id===c.id)&&kind==="timer"?{running:false}:{});components.push(c)});
  const actions=[];document.querySelectorAll("#actionBuilder .action-row").forEach(row=>{const effect=row.querySelector(".ba-effect").value.trim();let targetId="",delta="";if(effect){const parts=effect.split(":");const comp=components.find(c=>c.name.toLowerCase()===String(parts[0]||"").trim().toLowerCase());if(comp){targetId=comp.id;delta=String(parts.slice(1).join(":")).trim()}}actions.push({id:row.dataset.id,name:row.querySelector(".ba-name").value.trim()||"Action",reference:row.querySelector(".ba-ref").value.trim(),attackMod:row.querySelector(".ba-atk").value,damageDice:row.querySelector(".ba-dmg").value.trim(),rollDice:row.querySelector(".ba-roll").value.trim(),targetId,delta})});
- return{id:old?.id||uid(),name:document.getElementById("entityName").value.trim()||"Entity",type:document.getElementById("entityType").value,visible:document.getElementById("entityVisible").checked,quantity:Math.max(1,Number(document.getElementById("entityQuantity").value)||1),components,actions,effects:old?.effects||[]}
+ return{id:old?.id||uid(),name:document.getElementById("entityName").value.trim()||"Entity",type:document.getElementById("entityType").value,visible:document.getElementById("entityVisible").checked,quantity:Math.max(1,Number(document.getElementById("entityQuantity").value)||1),components,actions,effects:old?.effects||[],mobHP:old?.mobHP||[],selectedMob:old?.selectedMob||0,mobHPMax:old?.mobHPMax||0}
 }
 
 document.getElementById("renameForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===renamingId);if(t){t.name=document.getElementById("renameInput").value.trim()||"Player";saveAll();render()}document.getElementById("renameDialog").close()});
@@ -508,7 +562,9 @@ document.getElementById("addEntity").onclick=()=>openEntityBuilder();
 document.querySelectorAll("[data-add-component]").forEach(b=>b.onclick=()=>addComponentRow(componentDefaults(b.dataset.addComponent)));
 document.getElementById("addActionRow").onclick=()=>addActionRow();
 document.getElementById("entityForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const ent=collectEntity();if(editingEntityId){const i=entities.findIndex(x=>x.id===editingEntityId);entities[i]=ent;logEvent(`${ent.name} updated`)}else{entities.push(ent);logEvent(`${ent.name} added`)}saveAll();render();document.getElementById("entityDialog").close()});
-document.getElementById("pauseAll").onclick=()=>{timers.forEach(t=>t.running&&freeze(t));entities.forEach(e=>e.components.forEach(c=>c.kind==="timer"&&c.running&&freezeComp(c)));timeline.forEach(x=>x.running&&freezeTimeline(x));globalPaused=true;document.getElementById("partyStatus").classList.add("global-paused");logEvent("ALL CLOCKS + ENCOUNTER EVENTS PAUSED");saveAll();render();renderTimeline()};
+document.getElementById("playersToggle").onclick=()=>setPlayersRunning(!playersRunning);
+document.getElementById("eventsToggle").onclick=()=>setEventsRunning(!eventsRunning);
+document.getElementById("pauseAll").onclick=()=>{const run=!(playersRunning&&eventsRunning);setPlayersRunning(run);setEventsRunning(run);updateGroupButtons()};
 document.getElementById("addTimelineEvent").onclick=()=>openTimeline();
 document.getElementById("timelineForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const interval=Math.max(1,(Number(document.getElementById("timelineMinutes").value)||0)*60+(Number(document.getElementById("timelineSeconds").value)||0));let x=timeline.find(y=>y.id===editingTimelineId);if(!x){x={id:uid(),remaining:interval,running:false,startedAt:null,startRemaining:null};timeline.push(x)}else if(x.running)freezeTimeline(x);x.name=document.getElementById("timelineName").value.trim()||"Event";x.interval=interval;x.repeat=document.getElementById("timelineRepeat").checked;x.public=document.getElementById("timelinePublic").checked;x.entityId=document.getElementById("timelineEntity").value;x.remaining=Math.min(x.remaining||interval,interval);saveAll();renderTimeline();document.getElementById("timelineDialog").close()});
 document.getElementById("clearEvents").onclick=()=>{if(confirm("Clear event history?")){events=[];saveEvents();renderEvents()}};
@@ -542,21 +598,22 @@ document.getElementById("diceQty").addEventListener("input",updateDiceExpression
 document.getElementById("diceMod").addEventListener("input",updateDiceExpression);
 document.getElementById("diceRoll").onclick=()=>{const q=Math.max(1,Number(document.getElementById("diceQty").value)||1),m=Number(document.getElementById("diceMod").value)||0;showRoll("DM roll",rollDice(q,selectedDie,m))};
 updateDiceExpression();
-document.getElementById("playerStatsForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingStatsPlayerId);if(t){t.stats={};["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>t.stats[k]=Math.max(1,Math.min(30,Number(document.getElementById("stat"+k).value)||10)));t.stats.AC=Math.max(0,Number(document.getElementById("statAC").value)||0);["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>t.stats["bonus"+k]=Number(document.getElementById("bonus"+k).value)||0);logEvent(`${t.name}: stats updated`);saveAll();render()}document.getElementById("playerStatsDialog").close()});
+document.getElementById("playerStatsForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingStatsPlayerId);if(t){t.stats={};["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>t.stats[k]=Math.max(1,Math.min(30,Number(document.getElementById("stat"+k).value)||10)));t.stats.AC=Math.max(0,Number(document.getElementById("statAC").value)||0);t.activeRate=Math.max(0,Number(document.getElementById("activeRate").value)||0)/100;t.passiveRate=Math.max(0,Number(document.getElementById("passiveRate").value)||0)/100;["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>t.stats["bonus"+k]=Number(document.getElementById("bonus"+k).value)||0);logEvent(`${t.name}: stats updated`);saveAll();render()}document.getElementById("playerStatsDialog").close()});
 document.getElementById("addEntityRate").onclick=()=>addEntityEffectRow({id:uid(),name:"Poison",mode:"rate",amount:.25,interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
 document.getElementById("addEntityPulse").onclick=()=>addEntityEffectRow({id:uid(),name:"Burning",mode:"pulse",amount:-5,interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
 document.getElementById("entityEffectsForm").addEventListener("submit",ev=>{if(ev.submitter?.value==="cancel")return;ev.preventDefault();const ent=entities.find(x=>x.id===editingEffectsEntityId);if(ent){ent.effects=[];document.querySelectorAll("#entityEffectsBuilder .effect-row").forEach(r=>{const duration=Math.max(0,Number(r.querySelector(".fx-duration").value)||0);ent.effects.push({id:r.dataset.id,name:r.querySelector(".fx-name").value.trim()||"Effect",mode:r.dataset.mode,amount:Number(r.querySelector(".fx-amount").value)||0,interval:Math.max(1,Number(r.querySelector(".fx-interval").value)||10),duration,remainingDuration:duration,pulseElapsed:0})});logEvent(`${ent.name}: timed effects updated`);saveAll();render()}document.getElementById("entityEffectsDialog").close()});
 document.getElementById("addRateEffect").onclick=()=>addEffectRow({id:uid(),name:"Poison",mode:"rate",amount:.25,interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
 document.getElementById("addPulseEffect").onclick=()=>addEffectRow({id:uid(),name:"Burning",mode:"pulse",amount:-5,interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
 document.getElementById("effectsForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingEffectsPlayerId);if(t){const was=t.running;if(was)freeze(t);t.effects=[];document.querySelectorAll("#effectsBuilder .effect-row").forEach(r=>{const duration=Math.max(0,Number(r.querySelector(".fx-duration").value)||0);t.effects.push({id:r.dataset.id,name:r.querySelector(".fx-name").value.trim()||"Effect",mode:r.dataset.mode,amount:Number(r.querySelector(".fx-amount").value)||0,interval:Math.max(1,Number(r.querySelector(".fx-interval").value)||10),duration,remainingDuration:duration,pulseElapsed:0})});if(was&&t.remaining>0){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining}logEvent(`${t.name}: timed effects updated`);saveAll();render()}document.getElementById("effectsDialog").close()});
-function savePlayerActions331(){const t=timers.find(x=>x.id===editingPlayerId);if(!t)return;t.playerActions=[];document.querySelectorAll("#playerActionBuilder .action-row").forEach(r=>{const maxRaw=r.querySelector(".ppa-max").value,currentRaw=r.querySelector(".ppa-current").value,maxUses=maxRaw===""?"":Math.max(0,Number(maxRaw)||0),currentUses=maxUses===""?"":Math.min(maxUses,Math.max(0,currentRaw===""?maxUses:(Number(currentRaw)||0)));t.playerActions.push({id:r.dataset.id,kind:r.querySelector(".ppa-kind").value,name:r.querySelector(".ppa-name").value.trim()||"Action",reference:r.querySelector(".ppa-ref").value.trim(),description:r.querySelector(".ppa-desc").value.trim(),timeCost:Math.max(0,Number(r.querySelector(".ppa-time").value)||0),maxUses,currentUses})});logEvent(`${t.name}: actions updated`);saveAll();render();document.getElementById("playerActionDialog").close()}
+function savePlayerActions331(){const t=timers.find(x=>x.id===editingPlayerId);if(!t)return;t.playerActions=[];document.querySelectorAll("#playerActionBuilder .action-row").forEach(r=>{const maxRaw=r.querySelector(".ppa-max").value,currentRaw=r.querySelector(".ppa-current").value,maxUses=maxRaw===""?"":Math.max(0,Number(maxRaw)||0),currentUses=maxUses===""?"":Math.min(maxUses,Math.max(0,currentRaw===""?maxUses:(Number(currentRaw)||0)));t.playerActions.push({id:r.dataset.id,kind:r.querySelector(".ppa-kind").value,name:r.querySelector(".ppa-name").value.trim()||"Action",reference:r.querySelector(".ppa-ref").value.trim(),description:r.querySelector(".ppa-desc").value.trim(),timeCost:Math.max(0,Number(r.querySelector(".ppa-time").value)||0),cooldown:Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),cooldownRemaining:Math.min(Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),Math.max(0,Number((t.playerActions||[]).find(a=>a.id===r.dataset.id)?.cooldownRemaining)||0)),maxUses,currentUses})});logEvent(`${t.name}: actions updated`);saveAll();render();document.getElementById("playerActionDialog").close()}
 document.getElementById("savePlayerActions331").onclick=savePlayerActions331;
 document.getElementById("addPlayerActionRow").onclick=()=>addPlayerActionRow();
-document.getElementById("playerActionForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingPlayerId);if(t){t.playerActions=[];document.querySelectorAll("#playerActionBuilder .builder-row").forEach(r=>(()=>{const maxRaw=r.querySelector(".ppa-max").value,currentRaw=r.querySelector(".ppa-current").value,maxUses=maxRaw===""?"":Math.max(0,Number(maxRaw)||0),currentUses=maxUses===""?"":Math.min(maxUses,Math.max(0,currentRaw===""?maxUses:(Number(currentRaw)||0)));return{id:r.dataset.id,kind:r.querySelector(".ppa-kind").value,name:r.querySelector(".ppa-name").value.trim()||"Action",reference:r.querySelector(".ppa-ref").value.trim(),description:r.querySelector(".ppa-desc").value.trim(),timeCost:Math.max(0,Number(r.querySelector(".ppa-time").value)||0),maxUses,currentUses}})());logEvent(`${t.name}: player actions updated`);saveAll();render()}document.getElementById("playerActionDialog").close()});
+document.getElementById("playerActionForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingPlayerId);if(t){t.playerActions=[];document.querySelectorAll("#playerActionBuilder .builder-row").forEach(r=>(()=>{const maxRaw=r.querySelector(".ppa-max").value,currentRaw=r.querySelector(".ppa-current").value,maxUses=maxRaw===""?"":Math.max(0,Number(maxRaw)||0),currentUses=maxUses===""?"":Math.min(maxUses,Math.max(0,currentRaw===""?maxUses:(Number(currentRaw)||0)));return{id:r.dataset.id,kind:r.querySelector(".ppa-kind").value,name:r.querySelector(".ppa-name").value.trim()||"Action",reference:r.querySelector(".ppa-ref").value.trim(),description:r.querySelector(".ppa-desc").value.trim(),timeCost:Math.max(0,Number(r.querySelector(".ppa-time").value)||0),cooldown:Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),cooldownRemaining:Math.min(Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),Math.max(0,Number((t.playerActions||[]).find(a=>a.id===r.dataset.id)?.cooldownRemaining)||0)),maxUses,currentUses}})());logEvent(`${t.name}: player actions updated`);saveAll();render()}document.getElementById("playerActionDialog").close()});
 
-let lastSecond=-1;
-setInterval(()=>{const now=Date.now(),second=Math.floor(now/1000);if(second===lastSecond)return;lastSecond=second;let full=false;
+let lastSecond=-1,lastTickMs=Date.now();
+setInterval(()=>{const now=Date.now(),second=Math.floor(now/1000);if(second===lastSecond)return;const dt=Math.max(0,Math.min(2,(now-lastTickMs)/1000));lastTickMs=now;lastSecond=second;let full=false;
  timers.forEach(t=>{if(!t.running)return;
+ if((t.turnState||"active")==="active"){const spent=dt*Math.max(0,Number(t.activeRate)||1.10);let cdChanged=false;(t.playerActions||[]).forEach(a=>{if(Number(a.cooldownRemaining)>0){a.cooldownRemaining=Math.max(0,Number(a.cooldownRemaining)-spent);cdChanged=true}});if(cdChanged)full=true}
  let pulseDelta=0,expired=[];(t.effects||[]).forEach(x=>{if(x.duration>0){x.remainingDuration=Math.max(0,(Number(x.remainingDuration)||0)-1);if(x.remainingDuration<=0){expired.push(x.id);return}}if(x.mode==="pulse"){x.pulseElapsed=(Number(x.pulseElapsed)||0)+1;if(x.pulseElapsed>=Math.max(1,Number(x.interval)||1)){x.pulseElapsed=0;pulseDelta+=Number(x.amount)||0;logEvent(`${t.name}: ${x.name} pulse ${Number(x.amount)>0?"+":""}${Number(x.amount)||0}s`)}}});
  if(expired.length){const names=(t.effects||[]).filter(x=>expired.includes(x.id)).map(x=>x.name);t.effects=(t.effects||[]).filter(x=>!expired.includes(x.id));names.forEach(n=>logEvent(`${t.name}: ${n} expired`));const cur=effective(t,now);t.remaining=cur;t.startedAt=now;t.startRemaining=cur;full=true}
  if(pulseDelta){const cur=Math.max(0,effective(t,now)+pulseDelta);t.remaining=cur;t.startedAt=now;t.startRemaining=cur;if(cur<=0){freeze(t);notifyZero(t)}full=true}
@@ -566,7 +623,7 @@ setInterval(()=>{const now=Date.now(),second=Math.floor(now/1000);if(second===la
  if(full){saveAll();render();renderTimeline()} schedulePartyPublish();
 },200);
 setInterval(saveAll,2000);window.addEventListener("beforeunload",saveAll);
-try{render();renderTimeline()}catch(err){
+try{render();renderTimeline();updateGroupButtons()}catch(err){
  console.error("BattleClock startup failed",err);
  const p=document.getElementById("players");
  if(p)p.innerHTML=`<article class="timer zero"><div class="name">BattleClock startup error</div><div class="hint">${String(err.message||err)}</div></article>`;
