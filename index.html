@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BattleClock v0.6 Player-Time</title>
+<title>BattleClock v0.7</title>
 <style>
 :root{--bg:#15171a;--panel:#24282d;--panel2:#1c1f23;--text:#f3f4f6;--muted:#aeb4bd;--border:#444b55;--run:#43d17a;--danger:#ff5c5c}
 *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
@@ -93,7 +93,7 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 .timeline-row.due{border-color:#b94949;box-shadow:0 0 18px #b9494933}.timeline-name{font-weight:900}.timeline-meta{font-size:10px;color:var(--muted);margin-top:2px}.timeline-clock{font:900 22px ui-monospace,SFMono-Regular,Menlo,monospace;text-align:center}.timeline-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.timeline-actions button{padding:6px 8px;font-size:10px}
 .timeline-public{color:#8de5a1}.timeline-private{color:#c2a7ff}.global-paused{color:#ffd37a!important;border-color:#8a6a28!important}
 
-/* v0.6 */
+/* v0.6.1 */
 .state-switch{border-radius:999px!important;padding:7px 11px!important;font-size:10px!important;letter-spacing:.04em}
 .state-switch.on{background:#315d43;border-color:#63a77c}.state-switch.off{background:#4b3434;border-color:#875454}
 .turn-strip{display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;margin:5px 0 7px}
@@ -106,11 +106,24 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 .mob-hp-row.down{opacity:.45}.mob-hp-track{height:10px;background:#0d1013;border-radius:99px;overflow:hidden}.mob-hp-fill{height:100%;background:var(--run)}
 .mob-hp-value{font:800 10px ui-monospace,monospace;text-align:right}.mob-hp-controls{display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px}.mob-hp-controls button{padding:5px 7px;font-size:10px}
 .group-controls{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+
+/* v0.7 desktop-first density */
+#players{grid-template-columns:repeat(4,minmax(245px,1fr))!important;gap:9px!important}
+.primary-timer{padding:10px!important}.primary-timer .clock{font-size:42px!important;padding:7px!important;margin:6px 0!important}
+.primary-timer .ability-strip{gap:3px!important}.primary-timer .ability{padding:4px!important}
+.primary-timer .controls{gap:3px!important}.primary-timer .controls button{padding:6px 7px!important;font-size:10px!important}
+.turn-banner{padding:6px 9px;border-radius:8px;font-size:11px;font-weight:900;text-align:center;margin:5px 0;border:1px solid #3b4651}
+.turn-banner.active{background:#173b28;color:#9df0b4}.turn-banner.passive{background:#453619;color:#ffd37a}
+.mob-hp-controls-v7{display:flex;gap:6px;align-items:center;margin-top:8px}.mob-hp-controls-v7 input{width:75px}
+.mob-initiative{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:9px;margin:8px 0;background:#0d1218;border:1px solid #303945;border-radius:10px}
+.mob-initiative-clock{font:900 24px ui-monospace,monospace}.bank-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:10px}
+.bank-card{border:1px solid #303945;border-radius:10px;padding:10px;background:#11171e}.bank-card strong{font-size:16px}
+@media(max-width:1200px){#players{grid-template-columns:repeat(2,minmax(280px,1fr))!important}}
 </style>
 </head>
 <body>
 <header>
-<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.6 Player-Time</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
+<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.7</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
 <div class="header-buttons">
 <span id="partyStatus" class="party-status">PARTY VIEW OFFLINE</span>
 <button id="partyConnect">CONNECT PARTY VIEW</button>
@@ -118,7 +131,7 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 <button id="playersToggle" class="state-switch on">PLAYERS · RUNNING</button>
 <button id="eventsToggle" class="state-switch on">EVENTS · RUNNING</button>
 <button id="pauseAll" class="state-switch on">ALL · RUNNING</button>
-<button id="addEntity" class="primary">+ ADD ENTITY</button>
+<button id="creatureBank">CREATURE BANK</button><button id="addEntity" class="primary">+ ADD ENTITY</button>
 </div>
 </header>
 <main>
@@ -167,10 +180,9 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 <div><label>INT</label><input id="statINT" type="number" min="1" max="30"><label>Custom bonus</label><input id="bonusINT" type="number" value="0"></div>
 <div><label>WIS</label><input id="statWIS" type="number" min="1" max="30"><label>Custom bonus</label><input id="bonusWIS" type="number" value="0"></div>
 <div><label>CHA</label><input id="statCHA" type="number" min="1" max="30"><label>Custom bonus</label><input id="bonusCHA" type="number" value="0"></div>
-<div><label>AC</label><input id="statAC" type="number" min="0" max="99"></div><div><label>ACTIVE rate (%)</label><input id="activeRate" type="number" min="0" max="500" step="5" value="110"></div>
-<div><label>PASSIVE rate (%)</label><input id="passiveRate" type="number" min="0" max="500" step="5" value="10"></div>
+<div><label>AC</label><input id="statAC" type="number" min="0" max="99"></div>
 </div>
-<div class="hint">Ability modifiers are calculated automatically. ACTIVE/PASSIVE rates control player clock drain. Passive drain is damage-over-time and does not recharge cooldowns.</div>
+<div class="hint">Ability modifiers are calculated automatically. ACTIVE/PASSIVE is a turn-state condition used by Rate Effects.</div>
 <div class="dialog-buttons"><button value="cancel">Cancel</button><button value="default" class="primary">Save</button></div>
 </form></dialog>
 
@@ -192,7 +204,8 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 </div>
 <div class="builder-grid">
 <div><label class="check"><input id="entityVisible" type="checkbox" checked> Visible in active session</label></div>
-<div><label for="entityQuantity">Mob quantity</label><input id="entityQuantity" type="number" min="1" max="999" value="1"><div class="hint">Used by Mob entities for grouped weak enemies.</div></div>
+<div><label for="entityQuantity">Mob quantity</label><input id="entityQuantity" type="number" min="1" max="999" value="1"><div class="hint">Used by Mob entities for grouped weak enemies.</div></div><div><label for="entityMobHP">HP per creature</label><input id="entityMobHP" type="number" min="1" value="10"></div>
+<div><label>Initiative interval</label><div style="display:flex;gap:6px"><input id="entityInitMin" type="number" min="0" value="0" title="minutes"><input id="entityInitSec" type="number" min="0" max="59" value="0" title="seconds"></div><div class="hint">Optional recurring action timer shown on this mob panel.</div></div>
 </div>
 <div class="builder-section">
 <strong>Components</strong>
@@ -219,6 +232,13 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 </form>
 </dialog>
 
+
+
+<dialog id="creatureBankDialog" class="builder"><form method="dialog">
+<h3>Creature Bank</h3><div class="hint">Reusable creature templates stored in this browser. DEPLOY makes a fresh encounter copy; editing the deployed copy does not change the bank.</div>
+<div id="creatureBankList" class="bank-grid"></div>
+<div class="dialog-buttons"><button value="cancel">Close</button></div>
+</form></dialog>
 
 <dialog id="timelineDialog" class="builder"><form method="dialog" id="timelineForm">
 <h3 id="timelineTitle">Add Encounter Event</h3>
@@ -255,9 +275,17 @@ while(timers.length<4)timers.push(makeTimer(`Player ${timers.length+1}`,true));
 timers=timers.map((t,i)=>({...t,primary:true,name:t.name||`Player ${i+1}`,color:t.color||"#43d17a"}));
 
 let entities=loadEntities();
+const CREATURE_BANK_KEY="battleClock_creature_bank_v07";let creatureBank=loadCreatureBank();
 const TIMELINE_KEY="battleClock_timeline_v05";
 let timeline=loadTimeline(), editingTimelineId=null, globalPaused=false;
 let playersRunning=true,eventsRunning=true,playerPauseSnapshot=new Set(),eventPauseSnapshot=new Set();
+
+function loadCreatureBank(){try{return JSON.parse(localStorage.getItem(CREATURE_BANK_KEY)||"[]")||[]}catch(e){return[]}}
+function saveCreatureBank(){localStorage.setItem(CREATURE_BANK_KEY,JSON.stringify(creatureBank))}
+function cloneCreature(x){const c=JSON.parse(JSON.stringify(x));c.id=uid();c.visible=true;c.selectedMob=0;c.components=(c.components||[]).map(z=>({...z,id:uid(),running:false,startedAt:null,startValue:null}));c.actions=(c.actions||[]).map(z=>({...z,id:uid()}));c.effects=[];if(c.type==="Mob"){const q=Math.max(1,Number(c.quantity)||1),mx=Math.max(1,Number(c.mobHPMax)||10);c.mobHP=Array(q).fill(mx);c.initiative={interval:Number(c.initiative?.interval)||0,remaining:Number(c.initiative?.interval)||0,running:false,startedAt:null,startRemaining:null}}return c}
+function saveCreatureToBank(e){const copy=JSON.parse(JSON.stringify(e));copy.bankId=uid();copy.id=undefined;copy.visible=true;if(copy.initiative){copy.initiative.running=false;copy.initiative.remaining=copy.initiative.interval;copy.initiative.startedAt=null;copy.initiative.startRemaining=null}creatureBank.push(copy);saveCreatureBank();toast(`${e.name} saved to Creature Bank.`)}
+function renderCreatureBank(){const h=document.getElementById("creatureBankList");h.innerHTML="";if(!creatureBank.length){h.innerHTML='<div class="empty" style="grid-column:1/-1">Creature Bank is empty. Build a creature in Session Entities, then use SAVE TO BANK.</div>';return}creatureBank.forEach(c=>{const d=document.createElement("div");d.className="bank-card";d.innerHTML=`<strong>${escapeHtml(c.name)}</strong><div class="sub">${escapeHtml(c.type)}${c.type==="Mob"?` · ×${c.quantity||1} · ${c.mobHPMax||10} HP`:""}</div>`;d.append(button("DEPLOY","primary",()=>{entities.push(cloneCreature(c));saveAll();render();toast(`${c.name} deployed.`)}),button("DELETE","danger",()=>{if(confirm(`Delete ${c.name} from Creature Bank?`)){creatureBank=creatureBank.filter(x=>x.bankId!==c.bankId);saveCreatureBank();renderCreatureBank()}}));h.append(d)})}
+
 function loadTimeline(){try{return JSON.parse(localStorage.getItem(TIMELINE_KEY)||"[]").map(x=>({...x,running:false,startedAt:null,startRemaining:null}))}catch(e){return[]}}
 function saveTimeline(){localStorage.setItem(TIMELINE_KEY,JSON.stringify(timeline))}
 function timelineEffective(x,now=Date.now()){if(!x.running)return Math.max(0,Number(x.remaining)||0);return Math.max(0,(Number(x.startRemaining)||0)-((now-x.startedAt)/1000))}
@@ -280,10 +308,11 @@ function publicSnapshot(){
    id:t.id,name:t.name,color:t.color||"#43d17a",
    remaining:effective(t,now),running:!!t.running,rate:timeRate(t),turnState:t.turnState||"active",
    cooldowns:(t.playerActions||[]).filter(a=>Number(a.cooldown)>0).map(a=>({name:a.name,remaining:Number(a.cooldownRemaining)||0})),
+   actions:(t.playerActions||[]).map(a=>({id:a.id,kind:a.kind,name:a.name,reference:a.reference,description:a.description,timeCost:Number(a.timeCost)||0,cooldown:Number(a.cooldown)||0,cooldownRemaining:Number(a.cooldownRemaining)||0,maxUses:a.maxUses,currentUses:a.currentUses})),
    effects:(t.effects||[]).map(x=>({name:x.name,mode:x.mode,amount:Number(x.amount)||0,remainingDuration:Number(x.remainingDuration??x.duration)||0}))
   })),
   entities:entities.filter(e=>e.visible!==false).map(e=>({
-   id:e.id,name:e.name,type:e.type,quantity:Math.max(1,Number(e.quantity)||1),mobHP:Array.isArray(e.mobHP)?e.mobHP:[],mobHPMax:Number(e.mobHPMax)||0,
+   id:e.id,name:e.name,type:e.type,quantity:Math.max(1,Number(e.quantity)||1),mobHP:Array.isArray(e.mobHP)?e.mobHP:[],mobHPMax:Number(e.mobHPMax)||0,initiative:e.initiative?{interval:e.initiative.interval,remaining:initiativeEffective(e,now),running:e.initiative.running}:null,
    components:(e.components||[]).map(c=>({
     id:c.id,name:c.name,kind:c.kind,
     value:c.kind==="timer"?compEffective(c,now):c.value,
@@ -324,10 +353,14 @@ async function restorePartySession(){
 
 
 function uid(){return (globalThis.crypto&&crypto.randomUUID)?crypto.randomUUID():String(Date.now()+Math.random())}
-function makeTimer(name,primary=false){return{id:uid(),name,primary,color:"#43d17a",remaining:game.defaultSeconds,running:false,startedAt:null,startRemaining:null,zeroNotified:false,turnState:"active",activeRate:1.10,passiveRate:0.10,playerActions:[],stats:{STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},effects:[]}}
-function baseTurnRate(t){return t.turnState==="passive"?(Number(t.passiveRate)??.10):(Number(t.activeRate)??1.10)}
-function timeRate(t){return Math.max(0,(t.effects||[]).filter(x=>x.mode==="rate").reduce((v,x)=>v+(Number(x.amount)||0),baseTurnRate(t)))}
-function toggleTurnState(t){if(t.running)freeze(t);t.turnState=t.turnState==="active"?"passive":"active";if(t.remaining>0&&playersRunning){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining}logEvent(`${t.name}: ${t.turnState.toUpperCase()} state`);saveAll();render()}
+function makeTimer(name,primary=false){return{id:uid(),name,primary,color:"#43d17a",remaining:game.defaultSeconds,running:false,startedAt:null,startRemaining:null,zeroNotified:false,turnState:"active",playerActions:[],stats:{STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},effects:[]}}
+function effectApplies(t,x){const c=x.condition||"always";return c==="always"||c===(t.turnState||"active")}
+function timeRate(t){return Math.max(0,(t.effects||[]).filter(x=>x.mode==="rate"&&effectApplies(t,x)).reduce((v,x)=>v+(Number(x.amount)||0),1))}
+function toggleTurnState(t,state=null){
+ const was=t.running;if(was)freeze(t);t.turnState=state||(t.turnState==="active"?"passive":"active");
+ if(was&&t.remaining>0&&playersRunning){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining}
+ logEvent(`${t.name}: ${t.turnState.toUpperCase()} state`);saveAll();render()
+}
 function effective(t,now=Date.now()){if(!t.running)return Math.max(0,t.remaining);return Math.max(0,t.startRemaining-((now-t.startedAt)/1000)*timeRate(t))}
 function freeze(t){t.remaining=effective(t);t.running=false;t.startedAt=null;t.startRemaining=null}
 function toggle(t){if(t.running){freeze(t);logEvent(`${t.name} stopped at ${format(t.remaining)}`)}else if(t.remaining>0&&playersRunning){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining;logEvent(`${t.name} started at ${format(t.remaining)}`)}saveAll();render()}
@@ -350,7 +383,7 @@ function timerCard(t){
  ["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>{const z=document.createElement("div");z.className="ability";const mod=Math.floor((Number(stats[k])-10)/2);const bonus=Number(stats["bonus"+k])||0;z.innerHTML=`<b>${k}</b><span>${stats[k]} ${mod>=0?"+":""}${mod} <small>(${bonus>=0?"+":""}${bonus})</small></span>`;statWrap.append(z)});
  const ac=document.createElement("div");ac.className="ability";ac.innerHTML=`<b>AC</b><span>🛡 ${stats.AC}</span>`;statWrap.append(ac);
  const statEdit=button("EDIT STATS","stats-edit",()=>openPlayerStats(t));
- const turn=document.createElement("div");turn.className="turn-strip";const ts=button(t.turnState==="passive"?"PASSIVE · NOT MY TURN":"ACTIVE · MY TURN","state-switch "+(t.turnState==="passive"?"off":"on"),()=>toggleTurnState(t));const tr=document.createElement("span");tr.className="turn-rate";tr.textContent=`ACTIVE ${Math.round((Number(t.activeRate)||1.1)*100)}% · PASSIVE ${Math.round((Number(t.passiveRate)??.1)*100)}%`;turn.append(ts,tr);
+ const turn=document.createElement("div");turn.className="turn-banner "+(t.turnState==="passive"?"passive":"active");const rr=Math.round(timeRate(t)*100);turn.textContent=`${t.turnState==="passive"?"PASSIVE · NOT MY TURN":"ACTIVE · MY TURN"} · ${rr}% TIME RATE${t.running?"":" WHEN RUNNING"}`;
  const clock=document.createElement("div");clock.className="clock";clock.textContent=format(sec);clock.title="Click to start or stop";clock.onclick=()=>toggle(t);
  const controls=document.createElement("div");controls.className="controls";
  [-30,-15,-10,-5].forEach(x=>controls.append(button(`−${Math.abs(x)}`,"adjust",()=>adjust(t,x))));
@@ -380,26 +413,29 @@ function componentView(entity,c){
 
 
 function ensureMobHP(e){
- const q=Math.max(1,Number(e.quantity)||1);if(e.type!=="Mob"||q>4)return;
- const hpComp=(e.components||[]).find(c=>c.kind==="resource"&&/^(hp|health|hit points?)$/i.test(c.name))||(e.components||[]).find(c=>c.kind==="resource");
- const max=Math.max(1,Number(hpComp?.max)||Number(hpComp?.value)||10),start=Math.max(0,Math.min(max,Number(hpComp?.value)||max));
- if(!Array.isArray(e.mobHP))e.mobHP=[];while(e.mobHP.length<q)e.mobHP.push(start);e.mobHP=e.mobHP.slice(0,q).map(v=>Math.max(0,Math.min(max,Number(v))));
- e.mobHP=e.mobHP.map(v=>Math.max(0,Math.min(max,Number(v)||0)));e.mobHPMax=max;e.selectedMob=Math.max(0,Math.min(q-1,Number(e.selectedMob)||0));
+ const q=Math.max(1,Number(e.quantity)||1);if(e.type!=="Mob")return;const max=Math.max(1,Number(e.mobHPMax)||10);
+ if(!Array.isArray(e.mobHP))e.mobHP=[];while(e.mobHP.length<q)e.mobHP.push(max);e.mobHP=e.mobHP.slice(0,q).map(v=>Math.max(0,Math.min(max,Number(v)??max)));e.mobHPMax=max;e.selectedMob=Math.max(0,Math.min(q-1,Number(e.selectedMob)||0));
 }
 function mobHPView(e){
- ensureMobHP(e);if(e.type!=="Mob"||Number(e.quantity)>4)return null;
- const box=document.createElement("div");box.className="mob-hp";const q=Math.max(1,Number(e.quantity)||1),max=Math.max(1,Number(e.mobHPMax)||10);
+ ensureMobHP(e);if(e.type!=="Mob")return null;const box=document.createElement("div");box.className="mob-hp";const q=Math.max(1,Number(e.quantity)||1),max=Math.max(1,Number(e.mobHPMax)||10);
  for(let i=0;i<q;i++){const row=document.createElement("div");row.className="mob-hp-row"+(i===e.selectedMob?" selected":"")+(e.mobHP[i]<=0?" down":"");row.onclick=()=>{e.selectedMob=i;saveAll();render()};const lab=document.createElement("b");lab.textContent=`#${i+1}`;const tr=document.createElement("div");tr.className="mob-hp-track";const fill=document.createElement("div");fill.className="mob-hp-fill";fill.style.width=`${Math.max(0,Math.min(100,e.mobHP[i]/max*100))}%`;tr.append(fill);const val=document.createElement("div");val.className="mob-hp-value";val.textContent=e.mobHP[i]<=0?"DOWN":`${e.mobHP[i]}/${max}`;row.append(lab,tr,val);box.append(row)}
- const ctr=document.createElement("div");ctr.className="mob-hp-controls";[-5,-1,1,5].forEach(d=>ctr.append(button(`${d>0?"+":""}${d}`,"",()=>changeMobHP(e,d))));ctr.append(button("RESET HP","",()=>{e.mobHP=Array(q).fill(max);saveAll();render()}));box.append(ctr);return box
+ const ctr=document.createElement("div");ctr.className="mob-hp-controls-v7";const amt=document.createElement("input");amt.type="number";amt.min="0";amt.value="1";ctr.append(amt,button("APPLY DAMAGE","danger",()=>changeMobHP(e,-Math.abs(Number(amt.value)||0))),button("ADD HEALTH","",()=>changeMobHP(e,Math.abs(Number(amt.value)||0))),button("RESET HP","",()=>{e.mobHP=Array(q).fill(max);saveAll();render()}));box.append(ctr);return box
 }
 function changeMobHP(e,d){ensureMobHP(e);const i=e.selectedMob||0,max=Math.max(1,Number(e.mobHPMax)||10);e.mobHP[i]=Math.max(0,Math.min(max,(Number(e.mobHP[i])||0)+d));logEvent(`${e.name} #${i+1} HP ${d>0?"+":""}${d} → ${e.mobHP[i]}/${max}`);saveAll();render()}
+
+
+function initiativeEffective(e,now=Date.now()){const x=e.initiative;if(!x||!x.interval)return 0;if(!x.running)return Math.max(0,Number(x.remaining)||0);return Math.max(0,(Number(x.startRemaining)||0)-((now-x.startedAt)/1000))}
+function freezeInitiative(e){if(!e.initiative)return;e.initiative.remaining=initiativeEffective(e);e.initiative.running=false;e.initiative.startedAt=null;e.initiative.startRemaining=null}
+function toggleInitiative(e){const x=e.initiative;if(!x||!x.interval)return;if(x.running)freezeInitiative(e);else{if(x.remaining<=0)x.remaining=x.interval;x.running=true;x.startedAt=Date.now();x.startRemaining=x.remaining}saveAll();render()}
+function resetInitiative(e,start=true){const x=e.initiative;if(!x)return;x.remaining=x.interval;x.running=false;x.startedAt=null;x.startRemaining=null;if(start&&eventsRunning&&x.interval){x.running=true;x.startedAt=Date.now();x.startRemaining=x.remaining}saveAll();render()}
+function mobInitiativeView(e){if(e.type!=="Mob"||!e.initiative?.interval)return null;const d=document.createElement("div");d.className="mob-initiative";const left=document.createElement("div");left.innerHTML=`<strong>INITIATIVE / NEXT ACTION</strong><div class="sub">Repeats every ${format(e.initiative.interval)}</div>`;const right=document.createElement("div");const cl=document.createElement("div");cl.className="mob-initiative-clock";cl.textContent=initiativeEffective(e)<=0?"DUE":format(initiativeEffective(e));right.append(cl,button(e.initiative.running?"PAUSE":"START","",()=>toggleInitiative(e)),button("RESET","",()=>resetInitiative(e,true)));d.append(left,right);return d}
 
 function entityCard(e){
  const card=document.createElement("article");card.className="entity-card";card.dataset.entityId=e.id;
  const head=document.createElement("div");head.className="entity-head";
  const left=document.createElement("div");left.innerHTML=`<div class="entity-title"></div><div class="entity-type"></div>`;left.querySelector(".entity-title").textContent=e.name;left.querySelector(".entity-type").textContent=e.type+(e.type==="Mob"?` · ×${Math.max(1,Number(e.quantity)||1)}`:"");
- const tools=document.createElement("div");tools.className="entity-tools";tools.append(button("EFFECTS","",()=>openEntityEffects(e)),button("HIDE","",()=>setEntityVisibility(e,false)),button("EDIT","",()=>openEntityBuilder(e)),button("DELETE","danger",()=>deleteEntity(e)));head.append(left,tools);card.append(head);
- const mh=mobHPView(e);if(mh)card.append(mh); const list=document.createElement("div");list.className="component-list";(e.components||[]).forEach(c=>list.append(componentView(e,c)));if(e.components?.length)card.append(list);
+ const tools=document.createElement("div");tools.className="entity-tools";tools.append(button("SAVE TO BANK","",()=>saveCreatureToBank(e)),button("EFFECTS","",()=>openEntityEffects(e)),button("HIDE","",()=>setEntityVisibility(e,false)),button("EDIT","",()=>openEntityBuilder(e)),button("DELETE","danger",()=>deleteEntity(e)));head.append(left,tools);card.append(head);
+ const mh=mobHPView(e);if(mh)card.append(mh);const mi=mobInitiativeView(e);if(mi)card.append(mi); const list=document.createElement("div");list.className="component-list";(e.components||[]).forEach(c=>list.append(componentView(e,c)));if(e.components?.length)card.append(list);
  if(e.actions?.length){const actions=document.createElement("div");actions.className="entity-actions";e.actions.forEach(a=>{const wrap=document.createElement("div");wrap.className="entity-action-box";const title=document.createElement("strong");title.textContent=a.name||"ACTION";wrap.append(title);if(a.reference){const r=document.createElement("div");r.className="action-ref";r.textContent=a.reference;wrap.append(r)}const rb=document.createElement("div");rb.className="entity-action-rolls";const result=document.createElement("div");result.className="entity-action-result";
  if(a.attackMod!==""&&a.attackMod!=null){const m=Number(a.attackMod)||0,expr=`1d20${m?`${m>0?"+":""}${m}`:""}`;rb.append(button(`ROLL ATTACK d20${m?`${m>0?"+":""}${m}`:""}`,"",()=>entityInlineRoll(e,a,expr,result)));if(e.type==="Mob"&&Number(e.quantity)>1)rb.append(button(`ROLL ATTACK ×${Math.max(1,Number(e.quantity)||1)}`,"",()=>entityInlineRoll(e,a,expr,result,true)))}
  if(a.damageDice){rb.append(button(`ROLL DAMAGE ${a.damageDice}`,"",()=>entityInlineRoll(e,a,a.damageDice,result)));if(e.type==="Mob"&&Number(e.quantity)>1)rb.append(button(`ROLL DAMAGE ×${Math.max(1,Number(e.quantity)||1)}`,"",()=>entityInlineRoll(e,a,a.damageDice,result,true)))}
@@ -443,18 +479,18 @@ function addPlayerActionRow(a={id:uid(),kind:"Action",name:"Action",reference:""
 function openPlayerActions(t){editingPlayerId=t.id;document.getElementById("playerActionTitle").textContent=`Actions — ${t.name}`;document.getElementById("playerActionBuilder").innerHTML="";(t.playerActions||[]).forEach(addPlayerActionRow);document.getElementById("playerActionDialog").showModal()}
 
 
-function openPlayerStats(t){editingStatsPlayerId=t.id;const st=Object.assign({STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},t.stats||{});document.getElementById("playerStatsTitle").textContent=`Stats — ${t.name}`;["STR","DEX","CON","INT","WIS","CHA","AC"].forEach(k=>document.getElementById("stat"+k).value=st[k]);["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>document.getElementById("bonus"+k).value=Number(st["bonus"+k])||0);document.getElementById("activeRate").value=Math.round((Number(t.activeRate)||1.10)*100);document.getElementById("passiveRate").value=Math.round((t.passiveRate!==undefined?Number(t.passiveRate):.10)*100);document.getElementById("playerStatsDialog").showModal()}
+function openPlayerStats(t){editingStatsPlayerId=t.id;const st=Object.assign({STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},t.stats||{});document.getElementById("playerStatsTitle").textContent=`Stats — ${t.name}`;["STR","DEX","CON","INT","WIS","CHA","AC"].forEach(k=>document.getElementById("stat"+k).value=st[k]);["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>document.getElementById("bonus"+k).value=Number(st["bonus"+k])||0);document.getElementById("playerStatsDialog").showModal()}
 
 
 let editingEffectsEntityId=null;
 function addEntityEffectRow(x={id:uid(),name:"Effect",mode:"rate",amount:.25,interval:10,duration:0,remainingDuration:0,pulseElapsed:0}){const h=document.getElementById("entityEffectsBuilder"),r=document.createElement("div");r.className="builder-row effect-row";r.dataset.id=x.id||uid();r.dataset.mode=x.mode||"rate";r.innerHTML='<div><label>Name</label><input class="fx-name"></div><div><label>Mode</label><input class="fx-mode" disabled></div><div><label>Amount</label><input class="fx-amount" type="number" step=".05"></div><div><label>Interval sec</label><input class="fx-interval" type="number" min="1"></div><div><label>Duration sec (0=∞)</label><input class="fx-duration" type="number" min="0"></div>';r.querySelector(".fx-name").value=x.name||"Effect";r.querySelector(".fx-mode").value=(x.mode||"rate").toUpperCase();r.querySelector(".fx-amount").value=Number(x.amount)||0;r.querySelector(".fx-interval").value=Math.max(1,Number(x.interval)||10);r.querySelector(".fx-duration").value=Math.max(0,Number(x.remainingDuration??x.duration)||0);if(x.mode==="rate")r.querySelector(".fx-interval").parentElement.style.visibility="hidden";r.append(button("REMOVE","danger",()=>r.remove()));h.append(r)}
 function openEntityEffects(e){editingEffectsEntityId=e.id;document.getElementById("entityEffectsTitle").textContent=`Timed Effects — ${e.name}`;document.getElementById("entityEffectsBuilder").innerHTML="";(e.effects||[]).forEach(addEntityEffectRow);document.getElementById("entityEffectsDialog").showModal()}
 let editingEffectsPlayerId=null;
-function addEffectRow(x={id:uid(),name:"Effect",mode:"rate",amount:0.25,interval:10,duration:0,remainingDuration:0,pulseElapsed:0}){
+function addEffectRow(x={id:uid(),name:"Effect",mode:"rate",amount:0,condition:"always",interval:10,duration:0,remainingDuration:0,pulseElapsed:0}){
  const host=document.getElementById("effectsBuilder"),row=document.createElement("div");row.className="builder-row effect-row";row.dataset.id=x.id||uid();row.dataset.mode=x.mode||"rate";
- row.innerHTML='<div><label>Name</label><input class="fx-name"></div><div><label>Mode</label><input class="fx-mode" disabled></div><div><label class="fx-amount-label">Amount</label><input class="fx-amount" type="number" step="0.05"></div><div><label>Interval sec</label><input class="fx-interval" type="number" min="1"></div><div><label>Duration sec (0=∞)</label><input class="fx-duration" type="number" min="0"></div>';
- row.querySelector(".fx-name").value=x.name||"Effect";row.querySelector(".fx-mode").value=(x.mode||"rate").toUpperCase();row.querySelector(".fx-amount").value=Number(x.amount)||0;row.querySelector(".fx-interval").value=Math.max(1,Number(x.interval)||10);row.querySelector(".fx-duration").value=Math.max(0,Number(x.remainingDuration??x.duration)||0);
- if(x.mode==="rate"){row.querySelector(".fx-amount-label").textContent="Rate modifier";row.querySelector(".fx-interval").parentElement.style.visibility="hidden"}else row.querySelector(".fx-amount-label").textContent="Pulse seconds";
+ row.innerHTML='<div><label>Name</label><input class="fx-name"></div><div><label>Mode</label><input class="fx-mode" disabled></div><div><label class="fx-amount-label">Amount</label><input class="fx-amount" type="number" step="0.05"></div><div><label>Applies when</label><select class="fx-condition"><option value="always">ALWAYS</option><option value="active">ACTIVE / MY TURN</option><option value="passive">PASSIVE / NOT MY TURN</option></select></div><div><label>Interval sec</label><input class="fx-interval" type="number" min="1"></div><div><label>Duration sec (0=∞)</label><input class="fx-duration" type="number" min="0"></div>';
+ row.querySelector(".fx-name").value=x.name||"Effect";row.querySelector(".fx-mode").value=(x.mode||"rate").toUpperCase();row.querySelector(".fx-amount").value=Number(x.amount)||0;row.querySelector(".fx-condition").value=x.condition||"always";row.querySelector(".fx-interval").value=Math.max(1,Number(x.interval)||10);row.querySelector(".fx-duration").value=Math.max(0,Number(x.remainingDuration??x.duration)||0);
+ if(x.mode==="rate"){row.querySelector(".fx-amount-label").textContent="Rate modifier";row.querySelector(".fx-interval").parentElement.style.visibility="hidden"}else{row.querySelector(".fx-amount-label").textContent="Pulse seconds";row.querySelector(".fx-condition").parentElement.style.visibility="hidden"}
  row.append(button("REMOVE","danger",()=>row.remove()));host.append(row)
 }
 function openEffects(t){editingEffectsPlayerId=t.id;document.getElementById("effectsTitle").textContent=`Timed Effects — ${t.name}`;document.getElementById("effectsBuilder").innerHTML="";(t.effects||[]).forEach(addEffectRow);document.getElementById("effectsDialog").showModal()}
@@ -511,13 +547,25 @@ function setEventsRunning(on){
 }
 function updateGroupButtons(){const pb=document.getElementById("playersToggle"),eb=document.getElementById("eventsToggle"),ab=document.getElementById("pauseAll");if(pb){pb.textContent=`PLAYERS · ${playersRunning?"RUNNING":"PAUSED"}`;pb.className="state-switch "+(playersRunning?"on":"off")}if(eb){eb.textContent=`EVENTS · ${eventsRunning?"RUNNING":"PAUSED"}`;eb.className="state-switch "+(eventsRunning?"on":"off")}if(ab){const all=playersRunning&&eventsRunning;ab.textContent=`ALL · ${all?"RUNNING":"PAUSED"}`;ab.className="state-switch "+(all?"on":"off")}}
 
+
+function exportSave(){
+ const payload={format:"BattleClockSave",version:"0.7",exportedAt:new Date().toISOString(),game,timers:timers.map(t=>{if(t.running)freeze(t);return t}),entities,creatureBank,timeline:timeline.map(x=>{if(x.running)freezeTimeline(x);return x}),events};
+ const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`BattleClock-save-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);saveAll();render();renderTimeline();toast("BattleClock save exported.")
+}
+function importSaveFile(file){
+ const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(d.format!=="BattleClockSave")throw new Error("Not a BattleClock save file");if(!confirm("Replace the current BattleClock state with this save?"))return;
+ game=d.game||game;timers=Array.isArray(d.timers)?d.timers:timers;entities=Array.isArray(d.entities)?d.entities:entities;creatureBank=Array.isArray(d.creatureBank)?d.creatureBank:creatureBank;saveCreatureBank();timeline=Array.isArray(d.timeline)?d.timeline:timeline;events=Array.isArray(d.events)?d.events:events;
+ timers.forEach(t=>{t.running=false;t.startedAt=null;t.startRemaining=null});timeline.forEach(x=>{x.running=false;x.startedAt=null;x.startRemaining=null});saveAll();render();renderTimeline();toast("BattleClock save imported.")
+ }catch(e){alert("Could not import save: "+e.message)}};rd.readAsText(file)
+}
+
 function saveAll(){saveTimeline();
  const now=Date.now();const tc=timers.map(t=>t.running?{...t,remaining:effective(t,now)}:{...t});localStorage.setItem(STORAGE_KEY,JSON.stringify(tc));
  const ec=entities.map(e=>({...e,components:(e.components||[]).map(c=>c.kind==="timer"&&c.running?{...c,value:compEffective(c,now)}:{...c})}));localStorage.setItem(ENTITY_KEY,JSON.stringify(ec));
  schedulePartyPublish();
 }
-function loadTimers(){try{let raw=localStorage.getItem(STORAGE_KEY)||localStorage.getItem("battleClock_v01")||localStorage.getItem("playerTimePool_v2");if(!raw)return null;return JSON.parse(raw).map(t=>({...t,primary:!!t.primary,color:t.color||"#43d17a",running:false,startedAt:null,startRemaining:null,turnState:t.turnState||"active",activeRate:Number(t.activeRate) || 1.10,passiveRate:t.passiveRate!==undefined?Number(t.passiveRate):0.10,playerActions:Array.isArray(t.playerActions)?t.playerActions.map(a=>({...a,cooldown:Number(a.cooldown)||0,cooldownRemaining:Number(a.cooldownRemaining)||0,maxUses:a.maxUses!==undefined?a.maxUses:(a.uses??""),currentUses:a.currentUses!==undefined?a.currentUses:(a.maxUses!==undefined?a.maxUses:(a.uses??"")),description:a.description||""})):[],stats:Object.assign({STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},t.stats||{}),effects:Array.isArray(t.effects)?t.effects.map(x=>({...x,remainingDuration:Number(x.remainingDuration??x.duration)||0,pulseElapsed:Number(x.pulseElapsed)||0})):[]}))}catch(e){return null}}
-function loadEntities(){try{return (JSON.parse(localStorage.getItem(ENTITY_KEY)||"[]")||[]).map(e=>({...e,visible:e.visible!==false,quantity:Math.max(1,Number(e.quantity)||1),effects:Array.isArray(e.effects)?e.effects:[],mobHP:Array.isArray(e.mobHP)?e.mobHP:[],selectedMob:Number(e.selectedMob)||0,mobHPMax:Number(e.mobHPMax)||0,components:(e.components||[]).map(c=>({...c,running:false,startedAt:null,startValue:null}))}))}catch(e){return[]}}
+function loadTimers(){try{let raw=localStorage.getItem(STORAGE_KEY)||localStorage.getItem("battleClock_v01")||localStorage.getItem("playerTimePool_v2");if(!raw)return null;return JSON.parse(raw).map(t=>({...t,primary:!!t.primary,color:t.color||"#43d17a",running:false,startedAt:null,startRemaining:null,turnState:t.turnState||"active",playerActions:Array.isArray(t.playerActions)?t.playerActions.map(a=>({...a,cooldown:Number(a.cooldown)||0,cooldownRemaining:Number(a.cooldownRemaining)||0,maxUses:a.maxUses!==undefined?a.maxUses:(a.uses??""),currentUses:a.currentUses!==undefined?a.currentUses:(a.maxUses!==undefined?a.maxUses:(a.uses??"")),description:a.description||""})):[],stats:Object.assign({STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},t.stats||{}),effects:Array.isArray(t.effects)?t.effects.map(x=>({...x,remainingDuration:Number(x.remainingDuration??x.duration)||0,pulseElapsed:Number(x.pulseElapsed)||0})):[]}))}catch(e){return null}}
+function loadEntities(){try{return (JSON.parse(localStorage.getItem(ENTITY_KEY)||"[]")||[]).map(e=>({...e,visible:e.visible!==false,quantity:Math.max(1,Number(e.quantity)||1),effects:Array.isArray(e.effects)?e.effects:[],mobHP:Array.isArray(e.mobHP)?e.mobHP:[],selectedMob:Number(e.selectedMob)||0,mobHPMax:Number(e.mobHPMax)||0,initiative:e.initiative?{...e.initiative,running:false,startedAt:null,startRemaining:null}:null,components:(e.components||[]).map(c=>({...c,running:false,startedAt:null,startValue:null}))}))}catch(e){return[]}}
 function loadGame(){try{return Object.assign({defaultSeconds:20*60},JSON.parse(localStorage.getItem(GAME_KEY)||localStorage.getItem("battleClock_game_v01")||"{}"))}catch(e){return{defaultSeconds:20*60}}}
 function saveGame(){localStorage.setItem(GAME_KEY,JSON.stringify(game))}
 function loadEvents(){try{return JSON.parse(localStorage.getItem(EVENT_KEY)||localStorage.getItem("battleClock_events_v01")||"[]")}catch(e){return[]}}
@@ -546,19 +594,21 @@ function addActionRow(a={id:uid(),name:"Action",reference:"",attackMod:"",damage
  row.append(button("REMOVE","danger",()=>row.remove()));host.append(row)
 }
 function openEntityBuilder(e=null){
- editingEntityId=e?.id||null;document.getElementById("entityDialogTitle").textContent=e?"Edit Entity":"Add Entity";document.getElementById("entityName").value=e?.name||"New Entity";document.getElementById("entityType").value=e?.type||"NPC";document.getElementById("entityVisible").checked=e?.visible!==false;document.getElementById("entityQuantity").value=Math.max(1,Number(e?.quantity)||1);document.getElementById("componentBuilder").innerHTML="";document.getElementById("actionBuilder").innerHTML="";
+ editingEntityId=e?.id||null;document.getElementById("entityDialogTitle").textContent=e?"Edit Entity":"Add Entity";document.getElementById("entityName").value=e?.name||"New Entity";document.getElementById("entityType").value=e?.type||"NPC";document.getElementById("entityVisible").checked=e?.visible!==false;document.getElementById("entityQuantity").value=Math.max(1,Number(e?.quantity)||1);document.getElementById("entityMobHP").value=Math.max(1,Number(e?.mobHPMax)||10);const ii=Number(e?.initiative?.interval)||0;document.getElementById("entityInitMin").value=Math.floor(ii/60);document.getElementById("entityInitSec").value=ii%60;document.getElementById("componentBuilder").innerHTML="";document.getElementById("actionBuilder").innerHTML="";
  (e?.components||[]).forEach(addComponentRow);(e?.actions||[]).forEach(addActionRow);document.getElementById("entityDialog").showModal();
 }
 function collectEntity(){
  const old=editingEntityId?entities.find(e=>e.id===editingEntityId):null;const components=[];
- document.querySelectorAll("#componentBuilder .builder-row").forEach(row=>{const kind=row.dataset.kind,name=row.querySelector(".bc-name").value.trim()||kind,valueRaw=row.querySelector(".bc-value").value;let c={id:row.dataset.id,kind,name};if(kind==="timer"){c.value=parseTime(valueRaw);c.running=false;c.startedAt=null;c.startValue=null}else if(["counter","resource"].includes(kind)){c.value=Number(valueRaw)||0;if(kind==="resource"){c.max=Math.max(0,Number(row.querySelector(".bc-max").value)||0);c.value=Math.max(0,Math.min(c.max,c.value))}}else c.value=valueRaw;c=Object.assign(c,old?.components?.find(x=>x.id===c.id)&&kind==="timer"?{running:false}:{});components.push(c)});
+ document.querySelectorAll("#componentBuilder .builder-row").forEach(row=>{const kind=row.dataset.kind,name=row.querySelector(".bc-name").value.trim()||kind,valueRaw=row.querySelector(".bc-value").value;let c={id:row.dataset.id,kind,name};if(kind==="timer"){c.value=parseTime(valueRaw);c.running=false;c.startedAt=null;c.startValue=null}else if(["counter","resource"].includes(kind)){c.value=Number(valueRaw)||0;if(kind==="resource"){c.max=Math.max(0,Number(row.querySelector(".bc-max").value)||0);c.value=Math.max(0,Math.min(c.max,c.value))}}else c.value=valueRaw;components.push(c)});
  const actions=[];document.querySelectorAll("#actionBuilder .action-row").forEach(row=>{const effect=row.querySelector(".ba-effect").value.trim();let targetId="",delta="";if(effect){const parts=effect.split(":");const comp=components.find(c=>c.name.toLowerCase()===String(parts[0]||"").trim().toLowerCase());if(comp){targetId=comp.id;delta=String(parts.slice(1).join(":")).trim()}}actions.push({id:row.dataset.id,name:row.querySelector(".ba-name").value.trim()||"Action",reference:row.querySelector(".ba-ref").value.trim(),attackMod:row.querySelector(".ba-atk").value,damageDice:row.querySelector(".ba-dmg").value.trim(),rollDice:row.querySelector(".ba-roll").value.trim(),targetId,delta})});
- return{id:old?.id||uid(),name:document.getElementById("entityName").value.trim()||"Entity",type:document.getElementById("entityType").value,visible:document.getElementById("entityVisible").checked,quantity:Math.max(1,Number(document.getElementById("entityQuantity").value)||1),components,actions,effects:old?.effects||[],mobHP:old?.mobHP||[],selectedMob:old?.selectedMob||0,mobHPMax:old?.mobHPMax||0}
+ const type=document.getElementById("entityType").value,q=Math.max(1,Number(document.getElementById("entityQuantity").value)||1),mx=Math.max(1,Number(document.getElementById("entityMobHP").value)||10),interval=Math.max(0,(Number(document.getElementById("entityInitMin").value)||0)*60+(Number(document.getElementById("entityInitSec").value)||0));
+ const hp=Array.from({length:q},(_,i)=>Math.min(mx,Math.max(0,Number(old?.mobHP?.[i]??mx))));
+ return{id:old?.id||uid(),name:document.getElementById("entityName").value.trim()||"Entity",type,visible:document.getElementById("entityVisible").checked,quantity:q,components,actions,effects:old?.effects||[],mobHP:type==="Mob"?hp:[],selectedMob:Math.min(q-1,old?.selectedMob||0),mobHPMax:mx,initiative:{interval,remaining:old?.initiative?.interval===interval?(old.initiative.remaining??interval):interval,running:old?.initiative?.running||false,startedAt:old?.initiative?.startedAt||null,startRemaining:old?.initiative?.startRemaining||null}}
 }
 
 document.getElementById("renameForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===renamingId);if(t){t.name=document.getElementById("renameInput").value.trim()||"Player";saveAll();render()}document.getElementById("renameDialog").close()});
 document.getElementById("timeForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingId);if(t)setTime(t,(Number(document.getElementById("minutes").value)||0)*60+(Number(document.getElementById("seconds").value)||0));document.getElementById("timeDialog").close()});
-document.getElementById("addEntity").onclick=()=>openEntityBuilder();
+document.getElementById("addEntity").onclick=()=>openEntityBuilder();document.getElementById("creatureBank").onclick=()=>{renderCreatureBank();document.getElementById("creatureBankDialog").showModal()};
 document.querySelectorAll("[data-add-component]").forEach(b=>b.onclick=()=>addComponentRow(componentDefaults(b.dataset.addComponent)));
 document.getElementById("addActionRow").onclick=()=>addActionRow();
 document.getElementById("entityForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const ent=collectEntity();if(editingEntityId){const i=entities.findIndex(x=>x.id===editingEntityId);entities[i]=ent;logEvent(`${ent.name} updated`)}else{entities.push(ent);logEvent(`${ent.name} added`)}saveAll();render();document.getElementById("entityDialog").close()});
@@ -568,6 +618,7 @@ document.getElementById("pauseAll").onclick=()=>{const run=!(playersRunning&&eve
 document.getElementById("addTimelineEvent").onclick=()=>openTimeline();
 document.getElementById("timelineForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const interval=Math.max(1,(Number(document.getElementById("timelineMinutes").value)||0)*60+(Number(document.getElementById("timelineSeconds").value)||0));let x=timeline.find(y=>y.id===editingTimelineId);if(!x){x={id:uid(),remaining:interval,running:false,startedAt:null,startRemaining:null};timeline.push(x)}else if(x.running)freezeTimeline(x);x.name=document.getElementById("timelineName").value.trim()||"Event";x.interval=interval;x.repeat=document.getElementById("timelineRepeat").checked;x.public=document.getElementById("timelinePublic").checked;x.entityId=document.getElementById("timelineEntity").value;x.remaining=Math.min(x.remaining||interval,interval);saveAll();renderTimeline();document.getElementById("timelineDialog").close()});
 document.getElementById("clearEvents").onclick=()=>{if(confirm("Clear event history?")){events=[];saveEvents();renderEvents()}};
+document.getElementById("exportSave").onclick=exportSave;document.getElementById("importSave").onclick=()=>document.getElementById("importSaveFile").click();document.getElementById("importSaveFile").onchange=e=>{if(e.target.files[0])importSaveFile(e.target.files[0]);e.target.value=""};
 document.getElementById("gameSettings").onclick=()=>{document.getElementById("defaultMinutes").value=Math.floor(game.defaultSeconds/60);document.getElementById("defaultSeconds").value=game.defaultSeconds%60;document.getElementById("gameSettingsDialog").showModal()};
 document.getElementById("gameSettingsForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();game.defaultSeconds=Math.max(0,(Number(document.getElementById("defaultMinutes").value)||0)*60+(Number(document.getElementById("defaultSeconds").value)||0));saveGame();if(document.getElementById("applyDefaultPrimary").checked){timers.forEach(t=>{t.remaining=game.defaultSeconds;t.running=false;t.startedAt=null;t.startRemaining=null});document.getElementById("applyDefaultPrimary").checked=false}saveAll();render();document.getElementById("gameSettingsDialog").close();toast(`Default player timer set to ${format(game.defaultSeconds)}.`)});
 
@@ -591,6 +642,21 @@ document.getElementById("partyAuthForm").addEventListener("submit",async e=>{
 });
 restorePartySession().then(()=>{if(partyConnected)document.getElementById("partyConnect").textContent="DISCONNECT PARTY VIEW"});
 
+const processedPlayerCommands=new Map();
+async function pollPlayerControls(){
+ if(!partyConnected||!sb)return;
+ const {data,error}=await sb.from("battleclock_player_controls").select("player_id,turn_state,action_request,updated_at");
+ if(error){if(error.code!=="42P01")console.warn("Player controls unavailable",error);return}
+ let changed=false;
+ for(const r of (data||[])){const t=timers.find(x=>x.id===r.player_id);if(!t)continue;
+  if((r.turn_state==="active"||r.turn_state==="passive")&&t.turnState!==r.turn_state){toggleTurnState(t,r.turn_state);changed=true}
+  const req=r.action_request||{},nonce=req.nonce;if(nonce&&processedPlayerCommands.get(t.id)!==nonce){const a=(t.playerActions||[]).find(x=>x.id===req.action_id);if(a){usePlayerAction(t,a);processedPlayerCommands.set(t.id,nonce);changed=true}}
+ }
+ if(changed)schedulePartyPublish(true)
+}
+setInterval(pollPlayerControls,1500);
+
+
 let selectedDie=20;
 function updateDiceExpression(){const q=Math.max(1,Number(document.getElementById("diceQty").value)||1),m=Number(document.getElementById("diceMod").value)||0;document.getElementById("diceExpression").textContent=`${q}d${selectedDie}${m?`${m>0?"+":""}${m}`:""}`}
 document.querySelectorAll("#quickDice [data-die]").forEach(b=>b.onclick=()=>{selectedDie=Number(b.dataset.die);document.querySelectorAll("#quickDice [data-die]").forEach(x=>x.classList.toggle("die-selected",x===b));updateDiceExpression()});
@@ -598,13 +664,13 @@ document.getElementById("diceQty").addEventListener("input",updateDiceExpression
 document.getElementById("diceMod").addEventListener("input",updateDiceExpression);
 document.getElementById("diceRoll").onclick=()=>{const q=Math.max(1,Number(document.getElementById("diceQty").value)||1),m=Number(document.getElementById("diceMod").value)||0;showRoll("DM roll",rollDice(q,selectedDie,m))};
 updateDiceExpression();
-document.getElementById("playerStatsForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingStatsPlayerId);if(t){t.stats={};["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>t.stats[k]=Math.max(1,Math.min(30,Number(document.getElementById("stat"+k).value)||10)));t.stats.AC=Math.max(0,Number(document.getElementById("statAC").value)||0);t.activeRate=Math.max(0,Number(document.getElementById("activeRate").value)||0)/100;t.passiveRate=Math.max(0,Number(document.getElementById("passiveRate").value)||0)/100;["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>t.stats["bonus"+k]=Number(document.getElementById("bonus"+k).value)||0);logEvent(`${t.name}: stats updated`);saveAll();render()}document.getElementById("playerStatsDialog").close()});
+document.getElementById("playerStatsForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingStatsPlayerId);if(t){t.stats={};["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>t.stats[k]=Math.max(1,Math.min(30,Number(document.getElementById("stat"+k).value)||10)));t.stats.AC=Math.max(0,Number(document.getElementById("statAC").value)||0);["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>t.stats["bonus"+k]=Number(document.getElementById("bonus"+k).value)||0);logEvent(`${t.name}: stats updated`);saveAll();render()}document.getElementById("playerStatsDialog").close()});
 document.getElementById("addEntityRate").onclick=()=>addEntityEffectRow({id:uid(),name:"Poison",mode:"rate",amount:.25,interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
 document.getElementById("addEntityPulse").onclick=()=>addEntityEffectRow({id:uid(),name:"Burning",mode:"pulse",amount:-5,interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
-document.getElementById("entityEffectsForm").addEventListener("submit",ev=>{if(ev.submitter?.value==="cancel")return;ev.preventDefault();const ent=entities.find(x=>x.id===editingEffectsEntityId);if(ent){ent.effects=[];document.querySelectorAll("#entityEffectsBuilder .effect-row").forEach(r=>{const duration=Math.max(0,Number(r.querySelector(".fx-duration").value)||0);ent.effects.push({id:r.dataset.id,name:r.querySelector(".fx-name").value.trim()||"Effect",mode:r.dataset.mode,amount:Number(r.querySelector(".fx-amount").value)||0,interval:Math.max(1,Number(r.querySelector(".fx-interval").value)||10),duration,remainingDuration:duration,pulseElapsed:0})});logEvent(`${ent.name}: timed effects updated`);saveAll();render()}document.getElementById("entityEffectsDialog").close()});
+document.getElementById("entityEffectsForm").addEventListener("submit",ev=>{if(ev.submitter?.value==="cancel")return;ev.preventDefault();const ent=entities.find(x=>x.id===editingEffectsEntityId);if(ent){ent.effects=[];document.querySelectorAll("#entityEffectsBuilder .effect-row").forEach(r=>{const duration=Math.max(0,Number(r.querySelector(".fx-duration").value)||0);ent.effects.push({id:r.dataset.id,name:r.querySelector(".fx-name").value.trim()||"Effect",mode:r.dataset.mode,amount:Number(r.querySelector(".fx-amount").value)||0,condition:r.querySelector(".fx-condition")?.value||"always",interval:Math.max(1,Number(r.querySelector(".fx-interval").value)||10),duration,remainingDuration:duration,pulseElapsed:0})});logEvent(`${ent.name}: timed effects updated`);saveAll();render()}document.getElementById("entityEffectsDialog").close()});
 document.getElementById("addRateEffect").onclick=()=>addEffectRow({id:uid(),name:"Poison",mode:"rate",amount:.25,interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
 document.getElementById("addPulseEffect").onclick=()=>addEffectRow({id:uid(),name:"Burning",mode:"pulse",amount:-5,interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
-document.getElementById("effectsForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingEffectsPlayerId);if(t){const was=t.running;if(was)freeze(t);t.effects=[];document.querySelectorAll("#effectsBuilder .effect-row").forEach(r=>{const duration=Math.max(0,Number(r.querySelector(".fx-duration").value)||0);t.effects.push({id:r.dataset.id,name:r.querySelector(".fx-name").value.trim()||"Effect",mode:r.dataset.mode,amount:Number(r.querySelector(".fx-amount").value)||0,interval:Math.max(1,Number(r.querySelector(".fx-interval").value)||10),duration,remainingDuration:duration,pulseElapsed:0})});if(was&&t.remaining>0){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining}logEvent(`${t.name}: timed effects updated`);saveAll();render()}document.getElementById("effectsDialog").close()});
+document.getElementById("effectsForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingEffectsPlayerId);if(t){const was=t.running;if(was)freeze(t);t.effects=[];document.querySelectorAll("#effectsBuilder .effect-row").forEach(r=>{const duration=Math.max(0,Number(r.querySelector(".fx-duration").value)||0);t.effects.push({id:r.dataset.id,name:r.querySelector(".fx-name").value.trim()||"Effect",mode:r.dataset.mode,amount:Number(r.querySelector(".fx-amount").value)||0,condition:r.querySelector(".fx-condition")?.value||"always",interval:Math.max(1,Number(r.querySelector(".fx-interval").value)||10),duration,remainingDuration:duration,pulseElapsed:0})});if(was&&t.remaining>0){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining}logEvent(`${t.name}: timed effects updated`);saveAll();render()}document.getElementById("effectsDialog").close()});
 function savePlayerActions331(){const t=timers.find(x=>x.id===editingPlayerId);if(!t)return;t.playerActions=[];document.querySelectorAll("#playerActionBuilder .action-row").forEach(r=>{const maxRaw=r.querySelector(".ppa-max").value,currentRaw=r.querySelector(".ppa-current").value,maxUses=maxRaw===""?"":Math.max(0,Number(maxRaw)||0),currentUses=maxUses===""?"":Math.min(maxUses,Math.max(0,currentRaw===""?maxUses:(Number(currentRaw)||0)));t.playerActions.push({id:r.dataset.id,kind:r.querySelector(".ppa-kind").value,name:r.querySelector(".ppa-name").value.trim()||"Action",reference:r.querySelector(".ppa-ref").value.trim(),description:r.querySelector(".ppa-desc").value.trim(),timeCost:Math.max(0,Number(r.querySelector(".ppa-time").value)||0),cooldown:Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),cooldownRemaining:Math.min(Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),Math.max(0,Number((t.playerActions||[]).find(a=>a.id===r.dataset.id)?.cooldownRemaining)||0)),maxUses,currentUses})});logEvent(`${t.name}: actions updated`);saveAll();render();document.getElementById("playerActionDialog").close()}
 document.getElementById("savePlayerActions331").onclick=savePlayerActions331;
 document.getElementById("addPlayerActionRow").onclick=()=>addPlayerActionRow();
@@ -613,12 +679,13 @@ document.getElementById("playerActionForm").addEventListener("submit",e=>{if(e.s
 let lastSecond=-1,lastTickMs=Date.now();
 setInterval(()=>{const now=Date.now(),second=Math.floor(now/1000);if(second===lastSecond)return;const dt=Math.max(0,Math.min(2,(now-lastTickMs)/1000));lastTickMs=now;lastSecond=second;let full=false;
  timers.forEach(t=>{if(!t.running)return;
- if((t.turnState||"active")==="active"){const spent=dt*Math.max(0,Number(t.activeRate)||1.10);let cdChanged=false;(t.playerActions||[]).forEach(a=>{if(Number(a.cooldownRemaining)>0){a.cooldownRemaining=Math.max(0,Number(a.cooldownRemaining)-spent);cdChanged=true}});if(cdChanged)full=true}
+ if((t.turnState||"active")==="active"){const spent=dt;let cdChanged=false;(t.playerActions||[]).forEach(a=>{if(Number(a.cooldownRemaining)>0){a.cooldownRemaining=Math.max(0,Number(a.cooldownRemaining)-spent);cdChanged=true}});if(cdChanged)full=true}
  let pulseDelta=0,expired=[];(t.effects||[]).forEach(x=>{if(x.duration>0){x.remainingDuration=Math.max(0,(Number(x.remainingDuration)||0)-1);if(x.remainingDuration<=0){expired.push(x.id);return}}if(x.mode==="pulse"){x.pulseElapsed=(Number(x.pulseElapsed)||0)+1;if(x.pulseElapsed>=Math.max(1,Number(x.interval)||1)){x.pulseElapsed=0;pulseDelta+=Number(x.amount)||0;logEvent(`${t.name}: ${x.name} pulse ${Number(x.amount)>0?"+":""}${Number(x.amount)||0}s`)}}});
  if(expired.length){const names=(t.effects||[]).filter(x=>expired.includes(x.id)).map(x=>x.name);t.effects=(t.effects||[]).filter(x=>!expired.includes(x.id));names.forEach(n=>logEvent(`${t.name}: ${n} expired`));const cur=effective(t,now);t.remaining=cur;t.startedAt=now;t.startRemaining=cur;full=true}
  if(pulseDelta){const cur=Math.max(0,effective(t,now)+pulseDelta);t.remaining=cur;t.startedAt=now;t.startRemaining=cur;if(cur<=0){freeze(t);notifyZero(t)}full=true}
  const v=effective(t,now);const card=document.querySelector(`[data-timer-id="${CSS.escape(t.id)}"]`);if(card){card.querySelector(".clock").textContent=format(v)}if(v<=0){t.remaining=0;freeze(t);notifyZero(t);full=true}});
  entities.forEach(e=>e.components.forEach(c=>{if(c.kind!=="timer"||!c.running)return;const v=compEffective(c,now);const el=document.querySelector(`[data-entity-id="${CSS.escape(e.id)}"] [data-comp-id="${CSS.escape(c.id)}"] .component-value`);if(el)el.textContent=format(v);if(v<=0){c.value=0;freezeComp(c);logEvent(`${e.name}: ${c.name} reached 0:00`);full=true}}));
+ entities.filter(e=>e.type==="Mob"&&e.initiative?.running).forEach(e=>{const v=initiativeEffective(e,now);if(v<=0){freezeInitiative(e);logEvent(`${e.name}: INITIATIVE DUE`);full=true}});
  timeline.forEach(x=>{if(!x.running)return;const v=timelineEffective(x,now);const row=document.querySelector(`[data-timeline-id="${CSS.escape(x.id)}"]`);if(row){const cl=row.querySelector(".timeline-clock");if(cl)cl.textContent=v<=0?"DUE":format(v)}if(v<=0){x.remaining=0;freezeTimeline(x);logEvent(`${x.name}: DUE`);full=true}});
  if(full){saveAll();render();renderTimeline()} schedulePartyPublish();
 },200);
