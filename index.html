@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BattleClock v0.7</title>
+<title>BattleClock v0.7.1</title>
 <style>
 :root{--bg:#15171a;--panel:#24282d;--panel2:#1c1f23;--text:#f3f4f6;--muted:#aeb4bd;--border:#444b55;--run:#43d17a;--danger:#ff5c5c}
 *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
@@ -119,11 +119,20 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 .mob-initiative-clock{font:900 24px ui-monospace,monospace}.bank-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:10px}
 .bank-card{border:1px solid #303945;border-radius:10px;padding:10px;background:#11171e}.bank-card strong{font-size:16px}
 @media(max-width:1200px){#players{grid-template-columns:repeat(2,minmax(280px,1fr))!important}}
+
+/* v0.7.1 bugfixes */
+.ability{min-width:0}.ability span{display:flex;align-items:baseline;justify-content:center;gap:5px;white-space:nowrap}
+.ability .stat-base{color:#fff;font-weight:900}.ability .stat-mod{color:#fff;font-weight:800}.ability .stat-temp{color:#62c9ff;font-weight:900}
+.turn-banner{font-size:15px!important;letter-spacing:.04em;background:transparent!important;border:0!important;padding:3px!important;margin:3px 0!important}
+.turn-banner.active{color:#43d17a!important}.turn-banner.passive{color:#ff6969!important}
+.player-action{overflow:visible!important}.player-action-name{display:flex!important;flex-wrap:wrap!important;gap:5px!important;align-items:center!important;overflow:visible!important}
+.cooldown{white-space:nowrap!important;max-width:none!important;overflow:visible!important}
+.mob-initiative-clock{font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
 <header>
-<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.7</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
+<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.7.1</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
 <div class="header-buttons">
 <span id="partyStatus" class="party-status">PARTY VIEW OFFLINE</span>
 <button id="partyConnect">CONNECT PARTY VIEW</button>
@@ -380,10 +389,10 @@ function timerCard(t){
  const status=document.createElement("div");status.className="status";status.textContent=sec===0?"OUT OF TIME":(t.running?"● RUNNING":"STOPPED");if(t.running)status.style.color=t.color;head.append(identity,status);
  const statWrap=document.createElement("div");statWrap.className="ability-strip";
  const stats=Object.assign({STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},t.stats||{});
- ["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>{const z=document.createElement("div");z.className="ability";const mod=Math.floor((Number(stats[k])-10)/2);const bonus=Number(stats["bonus"+k])||0;z.innerHTML=`<b>${k}</b><span>${stats[k]} ${mod>=0?"+":""}${mod} <small>(${bonus>=0?"+":""}${bonus})</small></span>`;statWrap.append(z)});
+ ["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>{const z=document.createElement("div");z.className="ability";const base=Number(stats[k])||0,mod=Math.floor((base-10)/2),bonus=Number(stats["bonus"+k])||0;z.innerHTML=`<b>${k}</b><span><span class="stat-base">${base}</span><span class="stat-mod">${mod>=0?"+":""}${mod}</span>${bonus?`<span class="stat-temp">${bonus>0?"+":""}${bonus}</span>`:""}</span>`;statWrap.append(z)});
  const ac=document.createElement("div");ac.className="ability";ac.innerHTML=`<b>AC</b><span>🛡 ${stats.AC}</span>`;statWrap.append(ac);
  const statEdit=button("EDIT STATS","stats-edit",()=>openPlayerStats(t));
- const turn=document.createElement("div");turn.className="turn-banner "+(t.turnState==="passive"?"passive":"active");const rr=Math.round(timeRate(t)*100);turn.textContent=`${t.turnState==="passive"?"PASSIVE · NOT MY TURN":"ACTIVE · MY TURN"} · ${rr}% TIME RATE${t.running?"":" WHEN RUNNING"}`;
+ const turn=document.createElement("div");turn.className="turn-banner "+(t.turnState==="passive"?"passive":"active");turn.textContent=`${Math.round(timeRate(t)*100)}%`;turn.title=t.turnState==="passive"?"PASSIVE / NOT MY TURN":"ACTIVE / MY TURN";
  const clock=document.createElement("div");clock.className="clock";clock.textContent=format(sec);clock.title="Click to start or stop";clock.onclick=()=>toggle(t);
  const controls=document.createElement("div");controls.className="controls";
  [-30,-15,-10,-5].forEach(x=>controls.append(button(`−${Math.abs(x)}`,"adjust",()=>adjust(t,x))));
@@ -428,7 +437,7 @@ function initiativeEffective(e,now=Date.now()){const x=e.initiative;if(!x||!x.in
 function freezeInitiative(e){if(!e.initiative)return;e.initiative.remaining=initiativeEffective(e);e.initiative.running=false;e.initiative.startedAt=null;e.initiative.startRemaining=null}
 function toggleInitiative(e){const x=e.initiative;if(!x||!x.interval)return;if(x.running)freezeInitiative(e);else{if(x.remaining<=0)x.remaining=x.interval;x.running=true;x.startedAt=Date.now();x.startRemaining=x.remaining}saveAll();render()}
 function resetInitiative(e,start=true){const x=e.initiative;if(!x)return;x.remaining=x.interval;x.running=false;x.startedAt=null;x.startRemaining=null;if(start&&eventsRunning&&x.interval){x.running=true;x.startedAt=Date.now();x.startRemaining=x.remaining}saveAll();render()}
-function mobInitiativeView(e){if(e.type!=="Mob"||!e.initiative?.interval)return null;const d=document.createElement("div");d.className="mob-initiative";const left=document.createElement("div");left.innerHTML=`<strong>INITIATIVE / NEXT ACTION</strong><div class="sub">Repeats every ${format(e.initiative.interval)}</div>`;const right=document.createElement("div");const cl=document.createElement("div");cl.className="mob-initiative-clock";cl.textContent=initiativeEffective(e)<=0?"DUE":format(initiativeEffective(e));right.append(cl,button(e.initiative.running?"PAUSE":"START","",()=>toggleInitiative(e)),button("RESET","",()=>resetInitiative(e,true)));d.append(left,right);return d}
+function mobInitiativeView(e){if(e.type!=="Mob"||!e.initiative?.interval)return null;const d=document.createElement("div");d.className="mob-initiative";const left=document.createElement("div");left.innerHTML=`<strong>INITIATIVE / NEXT ACTION</strong><div class="sub">Repeats every ${format(e.initiative.interval)}</div>`;const right=document.createElement("div");const cl=document.createElement("div");cl.className="mob-initiative-clock";cl.dataset.mobInitiative=e.id;cl.textContent=initiativeEffective(e)<=0?"DUE":format(initiativeEffective(e));right.append(cl,button(e.initiative.running?"PAUSE":"START","",()=>toggleInitiative(e)),button("RESET","",()=>resetInitiative(e,true)));d.append(left,right);return d}
 
 function entityCard(e){
  const card=document.createElement("article");card.className="entity-card";card.dataset.entityId=e.id;
@@ -441,7 +450,7 @@ function entityCard(e){
  if(a.damageDice){rb.append(button(`ROLL DAMAGE ${a.damageDice}`,"",()=>entityInlineRoll(e,a,a.damageDice,result)));if(e.type==="Mob"&&Number(e.quantity)>1)rb.append(button(`ROLL DAMAGE ×${Math.max(1,Number(e.quantity)||1)}`,"",()=>entityInlineRoll(e,a,a.damageDice,result,true)))}
  if(a.rollDice){rb.append(button(`ROLL ${a.rollDice}`,"",()=>entityInlineRoll(e,a,a.rollDice,result)));if(e.type==="Mob"&&Number(e.quantity)>1)rb.append(button(`ROLL ×${Math.max(1,Number(e.quantity)||1)}`,"",()=>entityInlineRoll(e,a,a.rollDice,result,true)))}
  if((a.attackMod===""||a.attackMod==null)&&!a.damageDice&&!a.rollDice){extractDice(a.reference||"").forEach(expr=>rb.append(button(`ROLL ${expr}`,"",()=>entityInlineRoll(e,a,expr,result))))}
- rb.append(button("USE ACTION","",()=>runAction(e,a)));wrap.append(rb,result);actions.append(wrap)});card.append(actions)}
+ const hasRoll=rb.children.length>0;if(!hasRoll)rb.append(button("USE ACTION","",()=>runAction(e,a)));wrap.append(rb,result);actions.append(wrap)});card.append(actions)}
  return card
 }
 
@@ -467,7 +476,7 @@ function playerActionView(t,a){
  if(limited)footer.append(button("RESET","",()=>resetPlayerActionUses(t,a)));
  x.append(footer);return x
 }
-function usePlayerAction(t,a){if(Math.max(0,Number(a.cooldownRemaining)||0)>0){toast(`${a.name}: cooldown ${format(a.cooldownRemaining)} remaining.`);return}const limited=a.maxUses!==""&&a.maxUses!=null;if(limited&&Number(a.currentUses??a.maxUses)<=0){toast(`${a.name}: no uses remaining.`);return}const cost=Math.max(0,Number(a.timeCost)||0);if(cost)adjust(t,-cost);if(limited)a.currentUses=Math.max(0,Number(a.currentUses??a.maxUses)-1);if(Number(a.cooldown)>0)a.cooldownRemaining=Number(a.cooldown);logEvent(`${t.name}: ${a.name} used — PLAYER ROLL MANUALLY`);saveAll();render()}
+function usePlayerAction(t,a){if(Math.max(0,Number(a.cooldownRemaining)||0)>0){toast(`${a.name}: cooldown ${format(a.cooldownRemaining)} remaining.`);return}const limited=a.maxUses!==""&&a.maxUses!=null;if(limited&&Number(a.currentUses??a.maxUses)<=0){toast(`${a.name}: no uses remaining.`);return}const cost=Math.max(0,Number(a.timeCost)||0);if(cost){adjust(t,-cost);if((t.turnState||"active")==="active")(t.playerActions||[]).forEach(x=>{if(x!==a&&Number(x.cooldownRemaining)>0)x.cooldownRemaining=Math.max(0,Number(x.cooldownRemaining)-cost)})}if(limited)a.currentUses=Math.max(0,Number(a.currentUses??a.maxUses)-1);if(Number(a.cooldown)>0)a.cooldownRemaining=Number(a.cooldown);logEvent(`${t.name}: ${a.name} used — PLAYER ROLL MANUALLY`);saveAll();render()}
 function resetPlayerActionUses(t,a){if(a.maxUses===""||a.maxUses==null)return;a.currentUses=Math.max(0,Number(a.maxUses)||0);logEvent(`${t.name}: ${a.name} uses reset to ${a.currentUses}`);saveAll();render()}
 let editingPlayerId=null, editingStatsPlayerId=null;
 function addPlayerActionRow(a={id:uid(),kind:"Action",name:"Action",reference:"",description:"",timeCost:0,maxUses:"",currentUses:""}){
@@ -549,7 +558,7 @@ function updateGroupButtons(){const pb=document.getElementById("playersToggle"),
 
 
 function exportSave(){
- const payload={format:"BattleClockSave",version:"0.7",exportedAt:new Date().toISOString(),game,timers:timers.map(t=>{if(t.running)freeze(t);return t}),entities,creatureBank,timeline:timeline.map(x=>{if(x.running)freezeTimeline(x);return x}),events};
+ const payload={format:"BattleClockSave",version:"0.7.1",exportedAt:new Date().toISOString(),game,timers:timers.map(t=>{if(t.running)freeze(t);return t}),entities,creatureBank,timeline:timeline.map(x=>{if(x.running)freezeTimeline(x);return x}),events};
  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`BattleClock-save-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);saveAll();render();renderTimeline();toast("BattleClock save exported.")
 }
 function importSaveFile(file){
@@ -665,30 +674,49 @@ document.getElementById("diceMod").addEventListener("input",updateDiceExpression
 document.getElementById("diceRoll").onclick=()=>{const q=Math.max(1,Number(document.getElementById("diceQty").value)||1),m=Number(document.getElementById("diceMod").value)||0;showRoll("DM roll",rollDice(q,selectedDie,m))};
 updateDiceExpression();
 document.getElementById("playerStatsForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingStatsPlayerId);if(t){t.stats={};["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>t.stats[k]=Math.max(1,Math.min(30,Number(document.getElementById("stat"+k).value)||10)));t.stats.AC=Math.max(0,Number(document.getElementById("statAC").value)||0);["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>t.stats["bonus"+k]=Number(document.getElementById("bonus"+k).value)||0);logEvent(`${t.name}: stats updated`);saveAll();render()}document.getElementById("playerStatsDialog").close()});
-document.getElementById("addEntityRate").onclick=()=>addEntityEffectRow({id:uid(),name:"Poison",mode:"rate",amount:.25,interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
-document.getElementById("addEntityPulse").onclick=()=>addEntityEffectRow({id:uid(),name:"Burning",mode:"pulse",amount:-5,interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
+document.getElementById("addEntityRate").onclick=()=>addEntityEffectRow({id:uid(),name:"Active Rate",mode:"rate",amount:.10,condition:"active",interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
+document.getElementById("addEntityPulse").onclick=()=>addEntityEffectRow({id:uid(),name:"Burning",mode:"pulse",amount:-5,condition:"always",interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
 document.getElementById("entityEffectsForm").addEventListener("submit",ev=>{if(ev.submitter?.value==="cancel")return;ev.preventDefault();const ent=entities.find(x=>x.id===editingEffectsEntityId);if(ent){ent.effects=[];document.querySelectorAll("#entityEffectsBuilder .effect-row").forEach(r=>{const duration=Math.max(0,Number(r.querySelector(".fx-duration").value)||0);ent.effects.push({id:r.dataset.id,name:r.querySelector(".fx-name").value.trim()||"Effect",mode:r.dataset.mode,amount:Number(r.querySelector(".fx-amount").value)||0,condition:r.querySelector(".fx-condition")?.value||"always",interval:Math.max(1,Number(r.querySelector(".fx-interval").value)||10),duration,remainingDuration:duration,pulseElapsed:0})});logEvent(`${ent.name}: timed effects updated`);saveAll();render()}document.getElementById("entityEffectsDialog").close()});
-document.getElementById("addRateEffect").onclick=()=>addEffectRow({id:uid(),name:"Poison",mode:"rate",amount:.25,interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
-document.getElementById("addPulseEffect").onclick=()=>addEffectRow({id:uid(),name:"Burning",mode:"pulse",amount:-5,interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
-document.getElementById("effectsForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingEffectsPlayerId);if(t){const was=t.running;if(was)freeze(t);t.effects=[];document.querySelectorAll("#effectsBuilder .effect-row").forEach(r=>{const duration=Math.max(0,Number(r.querySelector(".fx-duration").value)||0);t.effects.push({id:r.dataset.id,name:r.querySelector(".fx-name").value.trim()||"Effect",mode:r.dataset.mode,amount:Number(r.querySelector(".fx-amount").value)||0,condition:r.querySelector(".fx-condition")?.value||"always",interval:Math.max(1,Number(r.querySelector(".fx-interval").value)||10),duration,remainingDuration:duration,pulseElapsed:0})});if(was&&t.remaining>0){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining}logEvent(`${t.name}: timed effects updated`);saveAll();render()}document.getElementById("effectsDialog").close()});
+document.getElementById("addRateEffect").onclick=()=>addEffectRow({id:uid(),name:"Active Rate",mode:"rate",amount:.10,condition:"active",interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
+document.getElementById("addPulseEffect").onclick=()=>addEffectRow({id:uid(),name:"Burning",mode:"pulse",amount:-5,condition:"always",interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
+document.getElementById("effectsForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingEffectsPlayerId);if(t){const was=t.running;if(was)freeze(t);t.effects=[];document.querySelectorAll("#effectsBuilder .effect-row").forEach(r=>{const duration=Math.max(0,Number(r.querySelector(".fx-duration").value)||0),prev=(t.effects||[]).find(x=>x.id===r.dataset.id);t.effects.push({id:r.dataset.id,name:r.querySelector(".fx-name").value.trim()||"Effect",mode:r.dataset.mode,amount:Number(r.querySelector(".fx-amount").value)||0,condition:r.querySelector(".fx-condition")?.value||"always",interval:Math.max(1,Number(r.querySelector(".fx-interval").value)||10),duration,remainingDuration:prev&&Number(prev.duration)===duration?Number(prev.remainingDuration??duration):duration,pulseElapsed:Number(prev?.pulseElapsed)||0})});if(was&&t.remaining>0){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining}logEvent(`${t.name}: timed effects updated`);saveAll();render()}document.getElementById("effectsDialog").close()});
 function savePlayerActions331(){const t=timers.find(x=>x.id===editingPlayerId);if(!t)return;t.playerActions=[];document.querySelectorAll("#playerActionBuilder .action-row").forEach(r=>{const maxRaw=r.querySelector(".ppa-max").value,currentRaw=r.querySelector(".ppa-current").value,maxUses=maxRaw===""?"":Math.max(0,Number(maxRaw)||0),currentUses=maxUses===""?"":Math.min(maxUses,Math.max(0,currentRaw===""?maxUses:(Number(currentRaw)||0)));t.playerActions.push({id:r.dataset.id,kind:r.querySelector(".ppa-kind").value,name:r.querySelector(".ppa-name").value.trim()||"Action",reference:r.querySelector(".ppa-ref").value.trim(),description:r.querySelector(".ppa-desc").value.trim(),timeCost:Math.max(0,Number(r.querySelector(".ppa-time").value)||0),cooldown:Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),cooldownRemaining:Math.min(Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),Math.max(0,Number((t.playerActions||[]).find(a=>a.id===r.dataset.id)?.cooldownRemaining)||0)),maxUses,currentUses})});logEvent(`${t.name}: actions updated`);saveAll();render();document.getElementById("playerActionDialog").close()}
 document.getElementById("savePlayerActions331").onclick=savePlayerActions331;
 document.getElementById("addPlayerActionRow").onclick=()=>addPlayerActionRow();
 document.getElementById("playerActionForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingPlayerId);if(t){t.playerActions=[];document.querySelectorAll("#playerActionBuilder .builder-row").forEach(r=>(()=>{const maxRaw=r.querySelector(".ppa-max").value,currentRaw=r.querySelector(".ppa-current").value,maxUses=maxRaw===""?"":Math.max(0,Number(maxRaw)||0),currentUses=maxUses===""?"":Math.min(maxUses,Math.max(0,currentRaw===""?maxUses:(Number(currentRaw)||0)));return{id:r.dataset.id,kind:r.querySelector(".ppa-kind").value,name:r.querySelector(".ppa-name").value.trim()||"Action",reference:r.querySelector(".ppa-ref").value.trim(),description:r.querySelector(".ppa-desc").value.trim(),timeCost:Math.max(0,Number(r.querySelector(".ppa-time").value)||0),cooldown:Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),cooldownRemaining:Math.min(Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),Math.max(0,Number((t.playerActions||[]).find(a=>a.id===r.dataset.id)?.cooldownRemaining)||0)),maxUses,currentUses}})());logEvent(`${t.name}: player actions updated`);saveAll();render()}document.getElementById("playerActionDialog").close()});
 
 let lastSecond=-1,lastTickMs=Date.now();
-setInterval(()=>{const now=Date.now(),second=Math.floor(now/1000);if(second===lastSecond)return;const dt=Math.max(0,Math.min(2,(now-lastTickMs)/1000));lastTickMs=now;lastSecond=second;let full=false;
- timers.forEach(t=>{if(!t.running)return;
- if((t.turnState||"active")==="active"){const spent=dt;let cdChanged=false;(t.playerActions||[]).forEach(a=>{if(Number(a.cooldownRemaining)>0){a.cooldownRemaining=Math.max(0,Number(a.cooldownRemaining)-spent);cdChanged=true}});if(cdChanged)full=true}
- let pulseDelta=0,expired=[];(t.effects||[]).forEach(x=>{if(x.duration>0){x.remainingDuration=Math.max(0,(Number(x.remainingDuration)||0)-1);if(x.remainingDuration<=0){expired.push(x.id);return}}if(x.mode==="pulse"){x.pulseElapsed=(Number(x.pulseElapsed)||0)+1;if(x.pulseElapsed>=Math.max(1,Number(x.interval)||1)){x.pulseElapsed=0;pulseDelta+=Number(x.amount)||0;logEvent(`${t.name}: ${x.name} pulse ${Number(x.amount)>0?"+":""}${Number(x.amount)||0}s`)}}});
- if(expired.length){const names=(t.effects||[]).filter(x=>expired.includes(x.id)).map(x=>x.name);t.effects=(t.effects||[]).filter(x=>!expired.includes(x.id));names.forEach(n=>logEvent(`${t.name}: ${n} expired`));const cur=effective(t,now);t.remaining=cur;t.startedAt=now;t.startRemaining=cur;full=true}
- if(pulseDelta){const cur=Math.max(0,effective(t,now)+pulseDelta);t.remaining=cur;t.startedAt=now;t.startRemaining=cur;if(cur<=0){freeze(t);notifyZero(t)}full=true}
- const v=effective(t,now);const card=document.querySelector(`[data-timer-id="${CSS.escape(t.id)}"]`);if(card){card.querySelector(".clock").textContent=format(v)}if(v<=0){t.remaining=0;freeze(t);notifyZero(t);full=true}});
- entities.forEach(e=>e.components.forEach(c=>{if(c.kind!=="timer"||!c.running)return;const v=compEffective(c,now);const el=document.querySelector(`[data-entity-id="${CSS.escape(e.id)}"] [data-comp-id="${CSS.escape(c.id)}"] .component-value`);if(el)el.textContent=format(v);if(v<=0){c.value=0;freezeComp(c);logEvent(`${e.name}: ${c.name} reached 0:00`);full=true}}));
- entities.filter(e=>e.type==="Mob"&&e.initiative?.running).forEach(e=>{const v=initiativeEffective(e,now);if(v<=0){freezeInitiative(e);logEvent(`${e.name}: INITIATIVE DUE`);full=true}});
- timeline.forEach(x=>{if(!x.running)return;const v=timelineEffective(x,now);const row=document.querySelector(`[data-timeline-id="${CSS.escape(x.id)}"]`);if(row){const cl=row.querySelector(".timeline-clock");if(cl)cl.textContent=v<=0?"DUE":format(v)}if(v<=0){x.remaining=0;freezeTimeline(x);logEvent(`${x.name}: DUE`);full=true}});
- if(full){saveAll();render();renderTimeline()} schedulePartyPublish();
+setInterval(()=>{
+ const now=Date.now();
+ timers.forEach(t=>{const card=document.querySelector(`[data-timer-id="${CSS.escape(t.id)}"]`);if(card){const c=card.querySelector(".clock");if(c)c.textContent=format(effective(t,now))}});
+ entities.forEach(e=>{
+   (e.components||[]).filter(c=>c.kind==="timer"&&c.running).forEach(c=>{const el=document.querySelector(`[data-entity-id="${CSS.escape(e.id)}"] [data-comp-id="${CSS.escape(c.id)}"] .component-value`);if(el)el.textContent=format(compEffective(c,now))});
+   if(e.type==="Mob"&&e.initiative?.interval){const el=document.querySelector(`[data-mob-initiative="${CSS.escape(e.id)}"]`);if(el){const v=initiativeEffective(e,now);el.textContent=v<=0?"DUE":format(v)}}
+ });
+ timeline.forEach(x=>{const row=document.querySelector(`[data-timeline-id="${CSS.escape(x.id)}"]`);if(row){const cl=row.querySelector(".timeline-clock");if(cl){const v=timelineEffective(x,now);cl.textContent=v<=0?"DUE":format(v)}}});
 },200);
+
+setInterval(()=>{
+ const now=Date.now(),second=Math.floor(now/1000);if(second===lastSecond)return;
+ const dt=Math.max(0,Math.min(2,(now-lastTickMs)/1000));lastTickMs=now;lastSecond=second;let full=false;
+ timers.forEach(t=>{
+   if(!t.running)return;
+   const active=(t.turnState||"active")==="active";
+   if(active){const spent=dt*timeRate(t);let cdChanged=false;(t.playerActions||[]).forEach(a=>{if(Number(a.cooldownRemaining)>0){a.cooldownRemaining=Math.max(0,Number(a.cooldownRemaining)-spent);cdChanged=true}});if(cdChanged)full=true}
+   let pulseDelta=0,expired=[];
+   (t.effects||[]).forEach(x=>{
+     if(x.duration>0){x.remainingDuration=Math.max(0,(Number(x.remainingDuration)||0)-dt);if(x.remainingDuration<=0){expired.push(x.id);return}}
+     if(x.mode==="pulse"){x.pulseElapsed=(Number(x.pulseElapsed)||0)+dt;if(x.pulseElapsed>=Math.max(1,Number(x.interval)||1)){x.pulseElapsed=0;pulseDelta+=Number(x.amount)||0;logEvent(`${t.name}: ${x.name} pulse ${Number(x.amount)>0?"+":""}${Number(x.amount)||0}s`)}}
+   });
+   if(expired.length){const cur=effective(t,now);t.remaining=cur;t.startedAt=now;t.startRemaining=cur;t.effects=(t.effects||[]).filter(x=>!expired.includes(x.id));full=true}
+   if(pulseDelta){const cur=Math.max(0,effective(t,now)+pulseDelta);t.remaining=cur;t.startedAt=now;t.startRemaining=cur;if(cur<=0){freeze(t);notifyZero(t)}full=true}
+   if(effective(t,now)<=0){t.remaining=0;freeze(t);notifyZero(t);full=true}
+ });
+ entities.forEach(e=>(e.components||[]).forEach(c=>{if(c.kind!=="timer"||!c.running)return;if(compEffective(c,now)<=0){c.value=0;freezeComp(c);logEvent(`${e.name}: ${c.name} reached 0:00`);full=true}}));
+ entities.filter(e=>e.type==="Mob"&&e.initiative?.running).forEach(e=>{if(initiativeEffective(e,now)<=0){freezeInitiative(e);logEvent(`${e.name}: INITIATIVE DUE`);full=true}});
+ timeline.forEach(x=>{if(x.running&&timelineEffective(x,now)<=0){x.remaining=0;freezeTimeline(x);logEvent(`${x.name}: DUE`);full=true}});
+ if(full){saveAll();render();renderTimeline()}schedulePartyPublish();
+},1000);
 setInterval(saveAll,2000);window.addEventListener("beforeunload",saveAll);
 try{render();renderTimeline();updateGroupButtons()}catch(err){
  console.error("BattleClock startup failed",err);
