@@ -1,9 +1,9 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BattleClock — Party View v0.7.2</title>
 <style>:root{color-scheme:dark;--bg:#0b0e12;--panel:#171c23;--text:#f6f7f9;--muted:#9da8b5;--border:#303945;--green:#8de5a1}*{box-sizing:border-box}body{margin:0;background:#0b0e12;color:var(--text);font-family:system-ui,sans-serif}header{padding:10px 18px;background:#0d1117;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}main{max-width:1600px;margin:auto;padding:12px}h1{margin:0;font-size:20px}.sub,.status{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}button,input,select{background:#151b22;color:#fff;border:1px solid #3b4651;border-radius:7px;padding:7px}button{cursor:pointer;font-weight:800}.primary{background:#244f35}.danger{background:#512929}.login{display:flex;gap:6px;align-items:center}#players{display:grid;grid-template-columns:repeat(4,minmax(250px,1fr));gap:9px}.card{background:#171c23;border:1px solid var(--border);border-radius:12px;padding:10px}.player{border-left:4px solid var(--pc,#55e08a)}.name{font-size:17px;font-weight:900}.clock{font:900 40px ui-monospace,monospace;background:#090c10;border-radius:8px;padding:6px;text-align:center;margin:5px 0}.turn{padding:5px;text-align:center;border-radius:7px;font-size:10px;font-weight:900}.turn.active{background:#173b28;color:#9df0b4}.turn.passive{background:#453619;color:#ffd37a}.actions{display:grid;gap:5px;margin-top:7px}.action{display:grid;grid-template-columns:1fr auto;gap:5px;align-items:center;background:#10151b;border:1px solid #2c3540;border-radius:8px;padding:6px}.action small{display:block;color:var(--muted)}.section{margin:16px 0 7px;font-size:12px;font-weight:900;text-transform:uppercase}.entities{display:grid;grid-template-columns:repeat(4,minmax(230px,1fr));gap:8px}.hp{display:grid;grid-template-columns:25px 1fr 52px;gap:5px;align-items:center;font-size:9px;margin:4px 0}.track{height:7px;background:#0a0d11;border-radius:99px;overflow:hidden}.fill{height:100%;background:#43d17a}.empty{color:var(--muted);padding:12px;border:1px dashed var(--border);border-radius:9px}dialog{background:#151b22;color:#fff;border:1px solid #3b4651;border-radius:12px}#claimBox{margin-bottom:10px;padding:8px;border:1px solid #303945;border-radius:9px}.mine{box-shadow:0 0 0 2px #8de5a155}</style></head>
-<body><header><div><h1>BattleClock</h1><div class="sub">Party View · v0.7.3 · desktop tabletop dashboard</div></div><div class="login"><span id="status" class="status">CONNECTING…</span></div></header>
+<body><header><div><h1>BattleClock</h1><div class="sub">Party View · v0.7.4 · desktop tabletop dashboard</div></div><div class="login"><span id="status" class="status">CONNECTING…</span></div></header>
 <main><div id="claimBox"><b>PLAYER PROFILE</b> <select id="playerSelect"><option value="">Choose your player…</option></select> <button id="claimBtn" class="primary">USE THIS PLAYER</button> <button id="changeBtn" type="button" style="display:none">CHANGE PLAYER</button> <span id="who" class="sub"></span></div><section id="players"></section><div class="section">Upcoming</div><section id="timeline"></section><div class="section">Session Entities</div><section id="entities" class="entities"></section></main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
-const U="https://ljqkmbngpdvgwfzgbmxp.supabase.co",K="sb_publishable_IwmRcJDgcBD40snvuUgN6g_Uct68Vvn",S="main",sb=supabase.createClient(U,K);let state=null,received=Date.now(),myPlayer=localStorage.getItem("battleClock_my_player_v073")||null;
+const U="https://ljqkmbngpdvgwfzgbmxp.supabase.co",K="sb_publishable_IwmRcJDgcBD40snvuUgN6g_Uct68Vvn",S="main",sb=supabase.createClient(U,K);let state=null,received=Date.now(),myPlayer=localStorage.getItem("battleClock_my_player_v074")||null;
 const $=x=>document.getElementById(x),esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])),fmt=n=>{n=Math.max(0,Math.floor(Number(n)||0));return Math.floor(n/60)+":"+String(n%60).padStart(2,"0")};
 function age(){return(Date.now()-received)/1000}function ptime(p){return p.running?Math.max(0,p.remaining-age()*(p.rate||1)):p.remaining}function etime(e){return e.running?Math.max(0,e.remaining-age()):e.remaining}
 async function load(){try{const r=await fetch(`${U}/rest/v1/battleclock_sessions?session_id=eq.${S}&select=public_state`,{headers:{apikey:K,Authorization:"Bearer "+K},cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status);const a=await r.json();state=a[0]?.public_state||{};received=Number(state.published_at)||Date.now();$("status").textContent="● LIVE";render();loadAvailablePlayers()}catch(e){$("status").textContent="LOAD ERROR"}}
@@ -14,7 +14,7 @@ const es=state?.entities||[];$("entities").innerHTML=es.length?es.map(e=>`<artic
 async function ensureControlRow(pid){
  const player=(state?.players||[]).find(p=>p.id===pid);
  const {error}=await sb.from("battleclock_player_controls").upsert({
-   session_id:S,player_id:pid,owner_user_id:null,
+   session_id:S,player_id:pid,
    turn_state:player?.turnState||"active",updated_at:new Date().toISOString()
  },{onConflict:"session_id,player_id"});
  if(error)throw error
@@ -37,7 +37,7 @@ function updateProfileUI(){
    $("playerSelect").value=myPlayer;$("playerSelect").disabled=true;
    $("claimBtn").style.display="none";$("changeBtn").style.display="";
  }else{
-   if(myPlayer){myPlayer=null;localStorage.removeItem("battleClock_my_player_v073")}
+   if(myPlayer){myPlayer=null;localStorage.removeItem("battleClock_my_player_v074")}
    $("who").textContent="";$("playerSelect").disabled=false;
    $("claimBtn").style.display="";$("changeBtn").style.display="none";
  }
@@ -51,11 +51,11 @@ function loadAvailablePlayers(){
 async function choosePlayer(){
  const pid=$("playerSelect").value;if(!pid)return;
  const player=(state?.players||[]).find(p=>p.id===pid);if(!player)return;
- try{await ensureControlRow(pid);myPlayer=pid;localStorage.setItem("battleClock_my_player_v073",pid);updateProfileUI();render()}
+ try{await ensureControlRow(pid);myPlayer=pid;localStorage.setItem("battleClock_my_player_v074",pid);updateProfileUI();render()}
  catch(error){alert("Could not select player: "+error.message)}
 }
 function changePlayer(){
- myPlayer=null;localStorage.removeItem("battleClock_my_player_v073");updateProfileUI();render()
+ myPlayer=null;localStorage.removeItem("battleClock_my_player_v074");updateProfileUI();render()
 }
 $("claimBtn").onclick=choosePlayer;$("changeBtn").onclick=changePlayer;
 load();setInterval(load,2000);setInterval(()=>{if(!state)return;(state.players||[]).forEach(p=>{const x=document.querySelector(`[data-p="${CSS.escape(String(p.id))}"]`);if(x)x.textContent=fmt(ptime(p))});(state.timeline||[]).forEach(e=>{const x=document.querySelector(`[data-e="${CSS.escape(String(e.id))}"]`);if(x)x.textContent=etime(e)<=0?"DUE":fmt(etime(e))});(state.entities||[]).forEach(e=>{if(e.initiative?.interval){const x=document.querySelector(`[data-mi="${CSS.escape(String(e.id))}"]`);if(x){const v=e.initiative.running?Math.max(0,e.initiative.remaining-age()):e.initiative.remaining;x.textContent=v<=0?"DUE":fmt(v)}}})},250);
