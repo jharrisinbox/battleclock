@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BattleClock v0.7.2</title>
+<title>BattleClock v0.8.0</title>
 <style>
 :root{--bg:#15171a;--panel:#24282d;--panel2:#1c1f23;--text:#f3f4f6;--muted:#aeb4bd;--border:#444b55;--run:#43d17a;--danger:#ff5c5c}
 *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
@@ -120,7 +120,7 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 .bank-card{border:1px solid #303945;border-radius:10px;padding:10px;background:#11171e}.bank-card strong{font-size:16px}
 @media(max-width:1200px){#players{grid-template-columns:repeat(2,minmax(280px,1fr))!important}}
 
-/* v0.7.2 bugfixes */
+/* v0.8.0 bugfixes */
 .ability{min-width:0}.ability span{display:flex;align-items:baseline;justify-content:center;gap:5px;white-space:nowrap}
 .ability .stat-base{color:#fff;font-weight:900}.ability .stat-mod{color:#fff;font-weight:800}.ability .stat-temp{color:#62c9ff;font-weight:900}
 .turn-banner{font-size:15px!important;letter-spacing:.04em;background:transparent!important;border:0!important;padding:3px!important;margin:3px 0!important}
@@ -128,11 +128,12 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 .player-action{overflow:visible!important}.player-action-name{display:flex!important;flex-wrap:wrap!important;gap:5px!important;align-items:center!important;overflow:visible!important}
 .cooldown{white-space:nowrap!important;max-width:none!important;overflow:visible!important}
 .mob-initiative-clock{font-variant-numeric:tabular-nums}
+.v08-panel{background:#151d25;border:1px solid #394554;border-radius:12px;padding:10px;margin:10px 0}.v08-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}.v08-head strong{margin-right:auto}.v08-line{display:flex;align-items:center;gap:8px;padding:5px 7px;border-bottom:1px solid #303945;font-size:12px}.v08-line span{flex:1}.v08-line b{min-width:85px;text-align:right}.v08-current{background:#173d2a;border-radius:6px}.v08-line button{padding:4px 7px}#v08Players{margin-top:12px}
 </style>
 </head>
 <body>
 <header>
-<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.7.2</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
+<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.8.0</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
 <div class="header-buttons">
 <span id="partyStatus" class="party-status">PARTY VIEW OFFLINE</span>
 <button id="partyConnect">CONNECT PARTY VIEW</button>
@@ -296,7 +297,7 @@ function loadCreatureBank(){try{return JSON.parse(localStorage.getItem(CREATURE_
 function saveCreatureBank(){localStorage.setItem(CREATURE_BANK_KEY,JSON.stringify(creatureBank))}
 function cloneCreature(x){const c=JSON.parse(JSON.stringify(x));c.id=uid();c.visible=true;c.selectedMob=0;c.components=(c.components||[]).map(z=>({...z,id:uid(),running:false,startedAt:null,startValue:null}));c.actions=(c.actions||[]).map(z=>({...z,id:uid()}));c.effects=[];if(c.type==="Mob"){const q=Math.max(1,Number(c.quantity)||1),mx=Math.max(1,Number(c.mobHPMax)||10);c.mobHP=Array(q).fill(mx);c.initiative={interval:Number(c.initiative?.interval)||0,remaining:Number(c.initiative?.interval)||0,running:false,startedAt:null,startRemaining:null}}return c}
 function saveCreatureToBank(e){const copy=JSON.parse(JSON.stringify(e));copy.bankId=uid();copy.id=undefined;copy.visible=true;if(copy.initiative){copy.initiative.running=false;copy.initiative.remaining=copy.initiative.interval;copy.initiative.startedAt=null;copy.initiative.startRemaining=null}creatureBank.push(copy);saveCreatureBank();toast(`${e.name} saved to Creature Bank.`)}
-function renderCreatureBank(){const h=document.getElementById("creatureBankList");h.innerHTML="";if(!creatureBank.length){h.innerHTML='<div class="empty" style="grid-column:1/-1">Creature Bank is empty. Build a creature in Session Entities, then use SAVE TO BANK.</div>';return}creatureBank.forEach(c=>{const d=document.createElement("div");d.className="bank-card";d.innerHTML=`<strong>${escapeHtml(c.name)}</strong><div class="sub">${escapeHtml(c.type)}${c.type==="Mob"?` · ×${c.quantity||1} · ${c.mobHPMax||10} HP`:""}</div>`;d.append(button("DEPLOY","primary",()=>{entities.push(cloneCreature(c));saveAll();render();toast(`${c.name} deployed.`)}),button("DELETE","danger",()=>{if(confirm(`Delete ${c.name} from Creature Bank?`)){creatureBank=creatureBank.filter(x=>x.bankId!==c.bankId);saveCreatureBank();renderCreatureBank()}}));h.append(d)})}
+function renderCreatureBank(){const h=document.getElementById("creatureBankList");h.innerHTML="";if(!creatureBank.length){h.innerHTML='<div class="empty" style="grid-column:1/-1">Creature Bank is empty. Build a creature in Session Entities, then use SAVE TO BANK.</div>';return}creatureBank.forEach(c=>{const d=document.createElement("div");d.className="bank-card";d.innerHTML=`<strong>${escapeHtml(c.name)}</strong><div class="sub">${escapeHtml(c.type)}${c.type==="Mob"?` · ×${c.quantity||1} · ${c.mobHPMax||10} HP`:""}</div>`;d.append(button("DEPLOY","primary",()=>{const count=c.type==="Mob"?prompt(`How many ${c.name} to deploy?`,String(c.quantity||1)):null;if(c.type==="Mob"&&count===null)return;const ent=cloneCreature(c);if(c.type==="Mob"){ent.quantity=Math.max(1,Math.min(99,Math.floor(Number(count)||1)));ent.mobHP=Array(ent.quantity).fill(Math.max(1,Number(ent.mobHPMax)||10))}entities.push(ent);saveAll();render();toast(`${c.name} deployed.`)}),button("DELETE","danger",()=>{if(confirm(`Delete ${c.name} from Creature Bank?`)){creatureBank=creatureBank.filter(x=>x.bankId!==c.bankId);saveCreatureBank();renderCreatureBank()}}));h.append(d)})}
 
 function loadTimeline(){try{return JSON.parse(localStorage.getItem(TIMELINE_KEY)||"[]").map(x=>({...x,running:false,startedAt:null,startRemaining:null}))}catch(e){return[]}}
 function saveTimeline(){localStorage.setItem(TIMELINE_KEY,JSON.stringify(timeline))}
@@ -312,10 +313,33 @@ const PARTY_SESSION_ID="main";
 const sb=window.supabase?.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 let partyConnected=false,partyPublishing=false,partyPublishPending=false,lastPartyPublish=0;
 
+
+// v0.8: two independent queues. Player queue commands are carried over the existing control table.
+const V08_KEY="battleClock_v08_queues";
+let v08=(()=>{try{return Object.assign({waiting:[],holding:[],mobOrder:[],mobActive:null,mobRunning:false},JSON.parse(localStorage.getItem(V08_KEY)||"{}"))}catch(_){return{waiting:[],holding:[],mobOrder:[],mobActive:null,mobRunning:false}}})();
+function saveV08(){localStorage.setItem(V08_KEY,JSON.stringify(v08))}
+function playerQueueStatus(t){if(t.turnState==="active"&&t.running)return "ACTIVE";const n=v08.waiting.indexOf(t.id);if(n>=0)return `ON-DECK (${n+1})`;return "HOLDING"}
+function v08PlayerCommand(t,type){
+ v08.waiting=v08.waiting.filter(id=>id!==t.id);
+ if(type==="join"){v08.waiting.push(t.id);if(t.running)freeze(t);t.turnState="passive"}
+ if(type==="hold"){if(t.running)freeze(t);t.turnState="passive"}
+ if(type==="start"){for(const other of timers){if(other!==t&&other.turnState==="active"){other.turnState="passive"}}t.turnState="active";if(!t.running&&t.remaining>0&&playersRunning){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining}}
+ if(type==="end"){if(t.running)freeze(t);t.turnState="passive"}
+ logEvent(`${t.name}: ${type.toUpperCase()}`);saveV08();saveAll();render();schedulePartyPublish(true)
+}
+function initiativeMobs(){return entities.filter(e=>e.type==="Mob"&&Number(e.initiative?.interval)>0)}
+function syncMobOrder(){const valid=initiativeMobs().map(e=>e.id);v08.mobOrder=v08.mobOrder.filter(id=>valid.includes(id));for(const id of valid)if(!v08.mobOrder.includes(id))v08.mobOrder.push(id);if(!v08.mobOrder.includes(v08.mobActive))v08.mobActive=v08.mobOrder[0]||null;saveV08()}
+function currentMob(){return entities.find(e=>e.id===v08.mobActive)}
+function mobAdvance(){syncMobOrder();const old=currentMob();if(old?.initiative){freezeInitiative(old);old.initiative.remaining=old.initiative.interval}const ix=v08.mobOrder.indexOf(v08.mobActive);v08.mobActive=v08.mobOrder[(ix+1)%v08.mobOrder.length]||null;const next=currentMob();if(next?.initiative&&v08.mobRunning&&eventsRunning){const x=next.initiative;x.running=true;x.startedAt=Date.now();x.startRemaining=x.remaining>0?x.remaining:x.interval}logEvent(`Initiative: ${next?.name||"none"} is next`);saveV08();saveAll();render()}
+function mobQueueToggle(){syncMobOrder();entities.forEach(e=>{if(e.initiative?.running)freezeInitiative(e)});v08.mobRunning=!v08.mobRunning;const e=currentMob();if(e?.initiative){if(!v08.mobRunning)freezeInitiative(e);else if(eventsRunning){const x=e.initiative;x.running=true;x.startedAt=Date.now();x.startRemaining=x.remaining>0?x.remaining:x.interval}}saveV08();saveAll();render()}
+function mobMove(id,delta){syncMobOrder();const i=v08.mobOrder.indexOf(id),j=i+delta;if(i<0||j<0||j>=v08.mobOrder.length)return;[v08.mobOrder[i],v08.mobOrder[j]]=[v08.mobOrder[j],v08.mobOrder[i]];saveV08();render()}
+function renderInitiativeQueue(){syncMobOrder();let h=document.getElementById("v08Initiative");if(!h){h=document.createElement("section");h.id="v08Initiative";h.className="v08-panel";document.getElementById("entities").before(h)}h.innerHTML="";const head=document.createElement("div");head.className="v08-head";head.innerHTML="<strong>GLOBAL MOB INITIATIVE</strong>";head.append(button(v08.mobRunning?"PAUSE QUEUE":"START QUEUE","primary",mobQueueToggle),button("NEXT MOB","",mobAdvance));h.append(head);v08.mobOrder.forEach((id,i)=>{const e=entities.find(x=>x.id===id);if(!e)return;const r=document.createElement("div");r.className="v08-line"+(id===v08.mobActive?" v08-current":"");const info=document.createElement("span");info.textContent=`${i+1}. ${e.name} ×${e.quantity||1} · ${e.engagedWith||"—"}`;const cl=document.createElement("b");cl.dataset.v08Mob=id;cl.textContent=format(initiativeEffective(e));r.append(info,cl,button("↑","",()=>mobMove(id,-1)),button("↓","",()=>mobMove(id,1)));h.append(r)})}
+function renderPlayerQueue(){let h=document.getElementById("v08Players");if(!h){h=document.createElement("section");h.id="v08Players";h.className="v08-panel";document.getElementById("players").before(h)}h.innerHTML="";const hd=document.createElement("div");hd.className="v08-head";hd.innerHTML="<strong>PLAYER TURN QUEUE</strong>";h.append(hd);timers.forEach(t=>{const r=document.createElement("div");r.className="v08-line";const nm=document.createElement("span");nm.textContent=t.name;const st=document.createElement("b");st.textContent=playerQueueStatus(t);r.append(nm,st,button("START","",()=>v08PlayerCommand(t,"start")),button("QUEUE","",()=>v08PlayerCommand(t,"join")),button("HOLD","",()=>v08PlayerCommand(t,"hold")));h.append(r)})}
+
 function publicSnapshot(){
  const now=Date.now();
  return{
-  version:2,published_at:now,
+  version:3,published_at:now,playerQueue:timers.map(t=>({id:t.id,name:t.name,status:playerQueueStatus(t)})),mobQueue:{active:v08.mobActive,running:v08.mobRunning,order:v08.mobOrder.map(id=>{const e=entities.find(x=>x.id===id);return e?{id,name:e.name,quantity:e.quantity||1,engagedWith:e.engagedWith||"",remaining:initiativeEffective(e,now),running:!!e.initiative?.running}:null}).filter(Boolean)},
   players:timers.map(t=>({
    id:t.id,name:t.name,color:t.color||"#43d17a",
    remaining:effective(t,now),running:!!t.running,rate:timeRate(t),turnState:t.turnState||"active",
@@ -324,7 +348,7 @@ function publicSnapshot(){
    effects:(t.effects||[]).map(x=>({name:x.name,mode:x.mode,amount:Number(x.amount)||0,remainingDuration:Number(x.remainingDuration??x.duration)||0}))
   })),
   entities:entities.filter(e=>e.visible!==false).map(e=>({
-   id:e.id,name:e.name,type:e.type,quantity:Math.max(1,Number(e.quantity)||1),mobHP:Array.isArray(e.mobHP)?e.mobHP:[],mobHPMax:Number(e.mobHPMax)||0,initiative:e.initiative?{interval:e.initiative.interval,remaining:initiativeEffective(e,now),running:e.initiative.running}:null,
+   id:e.id,name:e.name,type:e.type,quantity:Math.max(1,Number(e.quantity)||1),mobHP:e.type==="Mob"?[]:(Array.isArray(e.mobHP)?e.mobHP:[]),mobHPMax:e.type==="Mob"?0:(Number(e.mobHPMax)||0),engagedWith:e.engagedWith||"",initiative:e.initiative?{interval:e.initiative.interval,remaining:initiativeEffective(e,now),running:e.initiative.running}:null,
    components:(e.components||[]).map(c=>({
     id:c.id,name:c.name,kind:c.kind,
     value:c.kind==="timer"?compEffective(c,now):c.value,
@@ -410,6 +434,7 @@ function compEffective(c,now=Date.now()){if(c.kind!=="timer"||!c.running)return 
 function freezeComp(c){c.value=compEffective(c);c.running=false;c.startedAt=null;c.startValue=null}
 function changeComp(entity,c,delta){if(c.kind==="timer"){const n=Math.max(0,compEffective(c)+delta);c.value=n;if(c.running&&n>0){c.startedAt=Date.now();c.startValue=n}else if(n<=0)freezeComp(c)}else{c.value=(Number(c.value)||0)+delta;if(c.kind==="resource"){c.value=Math.max(0,Math.min(Number(c.max)||0,c.value))}}logEvent(`${entity.name}: ${c.name} ${delta>0?"+":""}${delta} → ${displayComp(c)}`);saveAll();render()}
 function toggleComp(entity,c){if(c.running){freezeComp(c);logEvent(`${entity.name}: ${c.name} stopped at ${format(c.value)}`)}else if(compEffective(c)>0){c.value=compEffective(c);c.running=true;c.startedAt=Date.now();c.startValue=c.value;logEvent(`${entity.name}: ${c.name} started`)}saveAll();render()}
+function resetComp(entity,c){c.value=Math.max(0,Number(c.configuredValue??c.initialValue??c.value)||0);freezeComp(c);logEvent(`${entity.name}: ${c.name} reset and paused`);saveAll();render()}
 function displayComp(c){if(c.kind==="timer")return format(compEffective(c));if(c.kind==="resource")return `${c.value} / ${c.max}`;return String(c.value??"")}
 
 function componentView(entity,c){
@@ -417,7 +442,7 @@ function componentView(entity,c){
  const head=document.createElement("div");head.className="component-head";const nm=document.createElement("div");nm.className="component-name";nm.textContent=c.name;const val=document.createElement("div");val.className="component-value";val.textContent=displayComp(c);head.append(nm,val);box.append(head);
  if(c.kind==="resource"){const tr=document.createElement("div");tr.className="resource-track";const fill=document.createElement("div");fill.className="resource-fill";fill.style.width=`${Math.max(0,Math.min(100,(Number(c.max)?Number(c.value)/Number(c.max)*100:0)))}%`;tr.append(fill);box.append(tr)}
  const ctr=document.createElement("div");ctr.className="comp-controls";
- if(c.kind==="timer"){ctr.append(button("−30","",()=>changeComp(entity,c,-30)),button("−10","",()=>changeComp(entity,c,-10)),button(c.running?"STOP":"START","",()=>toggleComp(entity,c)),button("+10","",()=>changeComp(entity,c,10)),button("+30","",()=>changeComp(entity,c,30)))}
+ if(c.kind==="timer"){ctr.append(button("−30","",()=>changeComp(entity,c,-30)),button("−10","",()=>changeComp(entity,c,-10)),button(c.running?"STOP":"START","",()=>toggleComp(entity,c)),button("RESET","",()=>resetComp(entity,c)),button("+10","",()=>changeComp(entity,c,10)),button("+30","",()=>changeComp(entity,c,30)))}
  else if(["counter","resource"].includes(c.kind)){ctr.append(button("−10","",()=>changeComp(entity,c,-10)),button("−1","",()=>changeComp(entity,c,-1)),button("+1","",()=>changeComp(entity,c,1)),button("+10","",()=>changeComp(entity,c,10)))}
  if(ctr.children.length)box.append(ctr);
  return box
@@ -440,7 +465,7 @@ function initiativeEffective(e,now=Date.now()){const x=e.initiative;if(!x||!x.in
 function freezeInitiative(e){if(!e.initiative)return;e.initiative.remaining=initiativeEffective(e);e.initiative.running=false;e.initiative.startedAt=null;e.initiative.startRemaining=null}
 function toggleInitiative(e){const x=e.initiative;if(!x||!x.interval)return;if(x.running)freezeInitiative(e);else{if(x.remaining<=0)x.remaining=x.interval;x.running=true;x.startedAt=Date.now();x.startRemaining=x.remaining}saveAll();render()}
 function resetInitiative(e,start=true){const x=e.initiative;if(!x)return;x.remaining=x.interval;x.running=false;x.startedAt=null;x.startRemaining=null;if(start&&eventsRunning&&x.interval){x.running=true;x.startedAt=Date.now();x.startRemaining=x.remaining}saveAll();render()}
-function mobInitiativeView(e){if(e.type!=="Mob"||!e.initiative?.interval)return null;const d=document.createElement("div");d.className="mob-initiative";const left=document.createElement("div");left.innerHTML=`<strong>INITIATIVE / NEXT ACTION</strong><div class="sub">Repeats every ${format(e.initiative.interval)}</div>`;const right=document.createElement("div");const cl=document.createElement("div");cl.className="mob-initiative-clock";cl.dataset.mobInitiative=e.id;cl.textContent=initiativeEffective(e)<=0?"DUE":format(initiativeEffective(e));right.append(cl,button(e.initiative.running?"PAUSE":"START","",()=>toggleInitiative(e)),button("RESET","",()=>resetInitiative(e,true)));d.append(left,right);return d}
+function mobInitiativeView(e){if(e.type!=="Mob"||!e.initiative?.interval)return null;const d=document.createElement("div");d.className="mob-initiative";const left=document.createElement("div");left.innerHTML=`<strong>GLOBAL INITIATIVE QUEUE</strong><div class="sub">${escapeHtml(e.engagedWith||"No target")} · interval ${format(e.initiative.interval)}</div>`;const right=document.createElement("div");const cl=document.createElement("div");cl.className="mob-initiative-clock";cl.dataset.mobInitiative=e.id;cl.textContent=initiativeEffective(e)<=0?"DUE":format(initiativeEffective(e));right.append(cl,button("RESET","",()=>{resetInitiative(e,false);renderInitiativeQueue()}));d.append(left,right);return d}
 
 function entityCard(e){
  const card=document.createElement("article");card.className="entity-card";card.dataset.entityId=e.id;
@@ -517,7 +542,7 @@ function deleteEntity(e){if(!confirm(`Delete ${e.name}?`))return;entities=entiti
 
 function render(){
  const p=document.getElementById("players"),e=document.getElementById("entities"),hp=document.getElementById("hiddenEntities"),hl=document.getElementById("hiddenEntityList");p.innerHTML="";e.innerHTML="";hl.innerHTML="";
- timers.forEach(t=>p.append(timerCard(t)));
+ timers.forEach(t=>p.append(timerCard(t)));renderPlayerQueue();renderInitiativeQueue();
  const visible=entities.filter(x=>x.visible!==false),hidden=entities.filter(x=>x.visible===false);
  visible.forEach(x=>e.append(entityCard(x)));
  hidden.forEach(x=>{const chip=document.createElement("div");chip.className="hidden-chip";const label=document.createElement("span");label.textContent=`${x.name} (${x.type})`;chip.append(label,button("SHOW","",()=>setEntityVisibility(x,true)));hl.append(chip)});
@@ -541,7 +566,7 @@ function renderTimeline(){
 function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function toggleTimeline(x){if(x.running)freezeTimeline(x);else if(eventsRunning)startTimeline(x);saveAll();renderTimeline()}
 function adjustTimeline(x,d){x.remaining=Math.max(0,timelineEffective(x)+d);if(x.running&&x.remaining>0){x.startedAt=Date.now();x.startRemaining=x.remaining}else if(x.remaining<=0)freezeTimeline(x);saveAll();renderTimeline()}
-function resetTimeline(x){x.remaining=x.interval;x.running=false;x.startedAt=null;x.startRemaining=null;if(x.repeat&&eventsRunning)startTimeline(x);logEvent(`${x.name}: reset to ${format(x.interval)}`);saveAll();renderTimeline()}
+function resetTimeline(x){x.remaining=x.interval;x.running=false;x.startedAt=null;x.startRemaining=null;logEvent(`${x.name}: reset to ${format(x.interval)}`);saveAll();renderTimeline()}
 function deleteTimeline(x){if(!confirm(`Delete timeline event "${x.name}"?`))return;timeline=timeline.filter(y=>y.id!==x.id);saveAll();renderTimeline()}
 function openTimeline(x=null){editingTimelineId=x?.id||null;document.getElementById("timelineTitle").textContent=x?"Edit Encounter Event":"Add Encounter Event";document.getElementById("timelineName").value=x?.name||"New event";const secs=x?Math.max(0,Math.round(x.interval||x.remaining||120)):120;document.getElementById("timelineMinutes").value=Math.floor(secs/60);document.getElementById("timelineSeconds").value=secs%60;document.getElementById("timelineRepeat").checked=x?.repeat??true;document.getElementById("timelinePublic").checked=x?.public??true;const sel=document.getElementById("timelineEntity");sel.innerHTML='<option value="">— none —</option>'+entities.map(e=>`<option value="${e.id}">${escapeHtml(e.name)}</option>`).join("");sel.value=x?.entityId||"";document.getElementById("timelineDialog").showModal()}
 
@@ -575,7 +600,7 @@ function importSaveFile(file){
  }catch(e){alert("Could not import save: "+e.message)}};rd.readAsText(file)
 }
 
-function saveAll(){saveTimeline();
+function saveAll(){saveTimeline();saveV08();
  const now=Date.now();const tc=timers.map(t=>t.running?{...t,remaining:effective(t,now)}:{...t});localStorage.setItem(STORAGE_KEY,JSON.stringify(tc));
  const ec=entities.map(e=>({...e,components:(e.components||[]).map(c=>c.kind==="timer"&&c.running?{...c,value:compEffective(c,now)}:{...c})}));localStorage.setItem(ENTITY_KEY,JSON.stringify(ec));
  schedulePartyPublish();
@@ -591,7 +616,7 @@ function renderEvents(){const el=document.getElementById("eventLog");if(!el)retu
 function notifyZero(t){if(t.zeroNotified)return;t.zeroNotified=true;logEvent(`${t.name} is OUT OF TIME`);saveAll()}
 function toast(msg){const x=document.getElementById("toast");x.textContent=msg;x.style.display="block";clearTimeout(toast._t);toast._t=setTimeout(()=>x.style.display="none",3000)}
 function openRename(t){renamingId=t.id;const i=document.getElementById("renameInput");i.value=t.name;document.getElementById("renameDialog").showModal();setTimeout(()=>{i.focus();i.select()},0)}
-function openSetTime(t){editingId=t.id;const sec=effective(t);document.getElementById("dialogTitle").textContent=`Set Time — ${t.name}`;document.getElementById("minutes").value=Math.floor(sec/60);document.getElementById("seconds").value=sec%60;document.getElementById("timeDialog").showModal()}
+function openSetTime(t){editingId=t.id;const sec=effective(t);document.getElementById("dialogTitle").textContent=`Set Time — ${t.name}`;document.getElementById("minutes").value=Math.floor(Math.round(sec)/60);document.getElementById("seconds").value=Math.round(sec)%60;document.getElementById("timeDialog").showModal()}
 
 function componentDefaults(kind){const base={id:uid(),kind,name:""};if(kind==="timer")return{...base,name:"Timer",value:60,running:false,startedAt:null,startValue:null};if(kind==="counter")return{...base,name:"Progress",value:0};if(kind==="resource")return{...base,name:"Resource",value:10,max:10};if(kind==="stat")return{...base,name:"AC",value:"10"};return{...base,name:"State",value:"Ready"}}
 function addComponentRow(c){
@@ -610,12 +635,14 @@ function addActionRow(a={id:uid(),name:"Action",reference:"",attackMod:"",damage
  row.append(button("REMOVE","danger",()=>row.remove()));host.append(row)
 }
 function openEntityBuilder(e=null){
+ if(!document.getElementById("v08EngagedWith")){const field=document.createElement("label");field.textContent="Engaged With (free text)";const input=document.createElement("input");input.id="v08EngagedWith";input.placeholder="Player, mob or NPC";field.append(input);document.getElementById("entityQuantity").parentElement.after(field)}
+ const target=document.getElementById("v08EngagedWith");if(target)target.value=e?.engagedWith||"";
  editingEntityId=e?.id||null;document.getElementById("entityDialogTitle").textContent=e?"Edit Entity":"Add Entity";document.getElementById("entityName").value=e?.name||"New Entity";document.getElementById("entityType").value=e?.type||"NPC";document.getElementById("entityVisible").checked=e?.visible!==false;document.getElementById("entityQuantity").value=Math.max(1,Number(e?.quantity)||1);document.getElementById("entityMobHP").value=Math.max(1,Number(e?.mobHPMax)||10);const ii=Number(e?.initiative?.interval)||0;document.getElementById("entityInitMin").value=Math.floor(ii/60);document.getElementById("entityInitSec").value=ii%60;document.getElementById("componentBuilder").innerHTML="";document.getElementById("actionBuilder").innerHTML="";
  (e?.components||[]).forEach(addComponentRow);(e?.actions||[]).forEach(addActionRow);document.getElementById("entityDialog").showModal();
 }
 function collectEntity(){
  const old=editingEntityId?entities.find(e=>e.id===editingEntityId):null;const components=[];
- document.querySelectorAll("#componentBuilder .builder-row").forEach(row=>{const kind=row.dataset.kind,name=row.querySelector(".bc-name").value.trim()||kind,valueRaw=row.querySelector(".bc-value").value;let c={id:row.dataset.id,kind,name};if(kind==="timer"){c.value=parseTime(valueRaw);c.running=false;c.startedAt=null;c.startValue=null}else if(["counter","resource"].includes(kind)){c.value=Number(valueRaw)||0;if(kind==="resource"){c.max=Math.max(0,Number(row.querySelector(".bc-max").value)||0);c.value=Math.max(0,Math.min(c.max,c.value))}}else c.value=valueRaw;components.push(c)});
+ document.querySelectorAll("#componentBuilder .builder-row").forEach(row=>{const kind=row.dataset.kind,name=row.querySelector(".bc-name").value.trim()||kind,valueRaw=row.querySelector(".bc-value").value;let c={id:row.dataset.id,kind,name};if(kind==="timer"){c.value=parseTime(valueRaw);c.configuredValue=c.value;c.running=false;c.startedAt=null;c.startValue=null}else if(["counter","resource"].includes(kind)){c.value=Number(valueRaw)||0;if(kind==="resource"){c.max=Math.max(0,Number(row.querySelector(".bc-max").value)||0);c.value=Math.max(0,Math.min(c.max,c.value))}}else c.value=valueRaw;components.push(c)});
  const actions=[];document.querySelectorAll("#actionBuilder .action-row").forEach(row=>{const effect=row.querySelector(".ba-effect").value.trim();let targetId="",delta="";if(effect){const parts=effect.split(":");const comp=components.find(c=>c.name.toLowerCase()===String(parts[0]||"").trim().toLowerCase());if(comp){targetId=comp.id;delta=String(parts.slice(1).join(":")).trim()}}actions.push({id:row.dataset.id,name:row.querySelector(".ba-name").value.trim()||"Action",reference:row.querySelector(".ba-ref").value.trim(),attackMod:row.querySelector(".ba-atk").value,damageDice:row.querySelector(".ba-dmg").value.trim(),rollDice:row.querySelector(".ba-roll").value.trim(),targetId,delta})});
  const type=document.getElementById("entityType").value,q=Math.max(1,Number(document.getElementById("entityQuantity").value)||1),mx=Math.max(1,Number(document.getElementById("entityMobHP").value)||10),interval=Math.max(0,(Number(document.getElementById("entityInitMin").value)||0)*60+(Number(document.getElementById("entityInitSec").value)||0));
  const hp=Array.from({length:q},(_,i)=>Math.min(mx,Math.max(0,Number(old?.mobHP?.[i]??mx))));
@@ -627,7 +654,7 @@ document.getElementById("timeForm").addEventListener("submit",e=>{if(e.submitter
 document.getElementById("addEntity").onclick=()=>openEntityBuilder();document.getElementById("creatureBank").onclick=()=>{renderCreatureBank();document.getElementById("creatureBankDialog").showModal()};
 document.querySelectorAll("[data-add-component]").forEach(b=>b.onclick=()=>addComponentRow(componentDefaults(b.dataset.addComponent)));
 document.getElementById("addActionRow").onclick=()=>addActionRow();
-document.getElementById("entityForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const ent=collectEntity();if(editingEntityId){const i=entities.findIndex(x=>x.id===editingEntityId);entities[i]=ent;logEvent(`${ent.name} updated`)}else{entities.push(ent);logEvent(`${ent.name} added`)}saveAll();render();document.getElementById("entityDialog").close()});
+document.getElementById("entityForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const ent=collectEntity();ent.engagedWith=document.getElementById("v08EngagedWith")?.value.trim()||"";if(editingEntityId){const i=entities.findIndex(x=>x.id===editingEntityId);entities[i]=ent;logEvent(`${ent.name} updated`)}else{entities.push(ent);logEvent(`${ent.name} added`)}saveAll();render();document.getElementById("entityDialog").close()});
 document.getElementById("playersToggle").onclick=()=>setPlayersRunning(!playersRunning);
 document.getElementById("eventsToggle").onclick=()=>setEventsRunning(!eventsRunning);
 document.getElementById("pauseAll").onclick=()=>{const run=!(playersRunning&&eventsRunning);setPlayersRunning(run);setEventsRunning(run);updateGroupButtons()};
@@ -660,13 +687,15 @@ restorePartySession().then(()=>{if(partyConnected)document.getElementById("party
 
 const processedPlayerCommands=new Map();
 async function pollPlayerControls(){
- if(!partyConnected||!sb)return;
+ // Party commands use the trusted anonymous control channel as of v0.7.4.
+ // Do not gate command processing on the legacy DM Supabase Auth flag.
+ if(!sb)return;
  const {data,error}=await sb.from("battleclock_player_controls").select("player_id,turn_state,action_request,updated_at");
  if(error){if(error.code!=="42P01")console.warn("Player controls unavailable",error);return}
  let changed=false;
  for(const r of (data||[])){const t=timers.find(x=>x.id===r.player_id);if(!t)continue;
-  if((r.turn_state==="active"||r.turn_state==="passive")&&t.turnState!==r.turn_state){toggleTurnState(t,r.turn_state);changed=true}
-  const req=r.action_request||{},nonce=req.nonce;if(nonce&&processedPlayerCommands.get(t.id)!==nonce){const a=(t.playerActions||[]).find(x=>x.id===req.action_id);if(a){usePlayerAction(t,a);processedPlayerCommands.set(t.id,nonce);changed=true}}
+  if((r.turn_state==="active"||r.turn_state==="passive")&&t.turnState!==r.turn_state&&!(r.action_request?.type==="queue")){toggleTurnState(t,r.turn_state);changed=true}
+  const req=r.action_request||{},nonce=req.nonce;if(nonce&&processedPlayerCommands.get(t.id)!==nonce&&req.type==="queue"){v08PlayerCommand(t,req.command);processedPlayerCommands.set(t.id,nonce);changed=true;continue}if(nonce&&processedPlayerCommands.get(t.id)!==nonce){const a=(t.playerActions||[]).find(x=>x.id===req.action_id);if(a){usePlayerAction(t,a);processedPlayerCommands.set(t.id,nonce);changed=true}}
  }
  if(changed)schedulePartyPublish(true)
 }
@@ -708,6 +737,7 @@ function refreshLiveDisplays(now=Date.now()){
    (e.components||[]).forEach(c=>{if(c.kind==="timer"){const el=document.querySelector(`[data-entity-id="${CSS.escape(e.id)}"] [data-comp-id="${CSS.escape(c.id)}"] .component-value`);if(el)el.textContent=format(compEffective(c,now))}});
    if(e.type==="Mob"&&e.initiative?.interval){const el=document.querySelector(`[data-mob-initiative="${CSS.escape(e.id)}"]`);if(el){const v=initiativeEffective(e,now);el.textContent=v<=0?"DUE":format(v)}}
  });
+ const current=currentMob();if(current){const el=document.querySelector(`[data-v08-mob="${CSS.escape(current.id)}"]`);if(el)el.textContent=format(initiativeEffective(current,now))}
  timeline.forEach(x=>{const row=document.querySelector(`[data-timeline-id="${CSS.escape(x.id)}"]`);if(row){const cl=row.querySelector(".timeline-clock");if(cl){const v=timelineEffective(x,now);cl.textContent=v<=0?"DUE":format(v)}}});
 }
 
@@ -730,7 +760,7 @@ function gameLogicTick(now=Date.now()){
    if(effective(t,now)<=0){t.remaining=0;freeze(t);notifyZero(t);rerender=true}
  });
  entities.forEach(e=>(e.components||[]).forEach(c=>{if(c.kind==="timer"&&c.running&&compEffective(c,now)<=0){c.value=0;freezeComp(c);logEvent(`${e.name}: ${c.name} reached 0:00`);rerender=true}}));
- entities.filter(e=>e.type==="Mob"&&e.initiative?.running).forEach(e=>{if(initiativeEffective(e,now)<=0){freezeInitiative(e);logEvent(`${e.name}: INITIATIVE DUE`);rerender=true}});
+ const activeMob=currentMob();if(v08.mobRunning&&activeMob?.initiative?.running&&initiativeEffective(activeMob,now)<=0){mobAdvance();rerender=true}
  timeline.forEach(x=>{if(x.running&&timelineEffective(x,now)<=0){x.remaining=0;freezeTimeline(x);logEvent(`${x.name}: DUE`);rerender=true}});
  if(rerender){saveAll();render();renderTimeline()}
  schedulePartyPublish();
