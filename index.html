@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BattleClock v0.8.3</title>
+<title>BattleClock v0.8.4</title>
 <style>
 :root{--bg:#15171a;--panel:#24282d;--panel2:#1c1f23;--text:#f3f4f6;--muted:#aeb4bd;--border:#444b55;--run:#43d17a;--danger:#ff5c5c}
 *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
@@ -137,7 +137,7 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 </head>
 <body>
 <header>
-<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.8.2</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
+<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.8.4</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
 <div class="header-buttons">
 <span id="partyStatus" class="party-status">PARTY VIEW OFFLINE</span>
 <button id="partyConnect">CONNECT PARTY VIEW</button>
@@ -281,6 +281,7 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 
 <dialog id="v083EditorDialog" class="builder"><form id="v083EditorForm"><h3 id="v083EditorTitle">Library template</h3><div id="v083EditorFields"></div><div class="dialog-buttons"><button type="button" id="v083EditorCancel">CANCEL</button><button type="submit" class="primary">SAVE</button></div></form></dialog>
 <dialog id="v083TargetDialog" class="builder"><form id="v083TargetForm"><h3 id="v083TargetTitle">Assign template</h3><label>Target<select id="v083TargetSelect" required></select></label><div class="dialog-buttons"><button type="button" id="v083TargetCancel">CANCEL</button><button type="submit" class="primary">CONFIRM</button></div></form></dialog>
+<dialog id="v084MobDeleteDialog" class="builder"><h3>Remove creature from combat?</h3><p id="v084MobDeleteText"></p><div class="dialog-buttons"><button type="button" id="v084MobDeleteCancel">CANCEL</button><button type="button" class="danger" id="v084MobDeleteConfirm">REMOVE CREATURE</button></div></dialog>
 <dialog id="v083DeleteDialog" class="builder"><h3>Delete saved template?</h3><p id="v083DeleteText"></p><div class="dialog-buttons"><button type="button" id="v083DeleteCancel">CANCEL</button><button type="button" class="danger" id="v083DeleteConfirm">DELETE TEMPLATE</button></div></dialog>
 <dialog id="v081NoteDialog" class="builder"><h3>DM Notepad</h3><div class="hint">DM only · Automatically saved · Included in game exports · Paste tab-separated Excel data as text</div><div id="v081NoteTabs" class="library-tabs"></div><div style="display:flex;gap:7px;margin:8px 0"><input id="v081NoteTitle" placeholder="Page name" style="flex:1"><button id="v081AddNote">+ PAGE</button><button id="v081DeleteNote">DELETE PAGE</button></div><textarea id="v081NoteBody" class="note-area" spellcheck="false"></textarea><div class="dialog-buttons"><button onclick="document.getElementById('v081NoteDialog').close()">CLOSE</button></div></dialog>
 <script>
@@ -687,7 +688,26 @@ function runAction(e,a){
  logEvent(msg);saveAll();render();
 }
 function setEntityVisibility(e,visible){e.visible=visible;logEvent(`${e.name} ${visible?"shown":"hidden"}`);saveAll();render()}
-function deleteEntity(e){if(!confirm(`Delete ${e.name}?`))return;entities=entities.filter(x=>x.id!==e.id);logEvent(`${e.name} deleted`);saveAll();render()}
+let v084PendingMobDeleteId=null;
+function deleteEntity(e){
+ v084PendingMobDeleteId=e.id;
+ document.getElementById("v084MobDeleteText").textContent=`Remove “${e.name}” from the DM dashboard? This will not delete its saved Creature Bank template.`;
+ document.getElementById("v084MobDeleteDialog").showModal();
+}
+function v084CloseMobDelete(){v084PendingMobDeleteId=null;document.getElementById("v084MobDeleteDialog").close()}
+function v084ConfirmMobDelete(){
+ const id=v084PendingMobDeleteId;
+ const target=entities.find(x=>x.id===id);
+ v084CloseMobDelete();
+ if(!target)return;
+ entities=entities.filter(x=>x.id!==id);
+ v08.mobOrder=v08.mobOrder.filter(x=>x!==id);
+ if(v08.mobActive===id){v08.mobActive=null;v08.mobRunning=false}
+ syncMobOrder();
+ logEvent(`${target.name} removed from combat`);
+ saveAll();render();schedulePartyPublish(true);
+ toast(`${target.name} removed from dashboard`);
+}
 
 function render(){
  const p=document.getElementById("players"),e=document.getElementById("entities"),hp=document.getElementById("hiddenEntities"),hl=document.getElementById("hiddenEntityList");p.innerHTML="";e.innerHTML="";hl.innerHTML="";
@@ -807,6 +827,8 @@ document.getElementById("v083EditorForm").addEventListener("submit",e=>{e.preven
 document.getElementById("v083EditorCancel").onclick=()=>{v083Edit=null;v083Back("v083EditorDialog")};
 document.getElementById("v083TargetForm").addEventListener("submit",e=>{e.preventDefault();v083SaveTarget()});
 document.getElementById("v083TargetCancel").onclick=()=>{v083Target=null;v083Back("v083TargetDialog")};
+document.getElementById("v084MobDeleteCancel").onclick=v084CloseMobDelete;
+document.getElementById("v084MobDeleteConfirm").onclick=v084ConfirmMobDelete;
 document.getElementById("v083DeleteCancel").onclick=()=>{v083Delete=null;v083Back("v083DeleteDialog")};
 document.getElementById("v083DeleteConfirm").onclick=v083ConfirmDelete;
 document.getElementById("dmNotepad").onclick=()=>{v081NotesRender();document.getElementById("v081NoteDialog").showModal()};
