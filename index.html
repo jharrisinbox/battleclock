@@ -278,6 +278,10 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 </dialog>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <dialog id="v081LibraryDialog" class="builder"><h3>BattleClock Library</h3><div id="v081LibraryTabs" class="library-tabs"></div><div id="v081LibraryList"></div><div class="dialog-buttons"><button id="v081NewEntry" class="primary">+ NEW</button><button onclick="document.getElementById('v081LibraryDialog').close()">CLOSE</button></div></dialog>
+
+<dialog id="v083EditorDialog" class="builder"><form id="v083EditorForm"><h3 id="v083EditorTitle">Library template</h3><div id="v083EditorFields"></div><div class="dialog-buttons"><button type="button" id="v083EditorCancel">CANCEL</button><button type="submit" class="primary">SAVE</button></div></form></dialog>
+<dialog id="v083TargetDialog" class="builder"><form id="v083TargetForm"><h3 id="v083TargetTitle">Assign template</h3><label>Target<select id="v083TargetSelect" required></select></label><div class="dialog-buttons"><button type="button" id="v083TargetCancel">CANCEL</button><button type="submit" class="primary">CONFIRM</button></div></form></dialog>
+<dialog id="v083DeleteDialog" class="builder"><h3>Delete saved template?</h3><p id="v083DeleteText"></p><div class="dialog-buttons"><button type="button" id="v083DeleteCancel">CANCEL</button><button type="button" class="danger" id="v083DeleteConfirm">DELETE TEMPLATE</button></div></dialog>
 <dialog id="v081NoteDialog" class="builder"><h3>DM Notepad</h3><div class="hint">DM only · Automatically saved · Included in game exports · Paste tab-separated Excel data as text</div><div id="v081NoteTabs" class="library-tabs"></div><div style="display:flex;gap:7px;margin:8px 0"><input id="v081NoteTitle" placeholder="Page name" style="flex:1"><button id="v081AddNote">+ PAGE</button><button id="v081DeleteNote">DELETE PAGE</button></div><textarea id="v081NoteBody" class="note-area" spellcheck="false"></textarea><div class="dialog-buttons"><button onclick="document.getElementById('v081NoteDialog').close()">CLOSE</button></div></dialog>
 <script>
 (()=>{
@@ -314,36 +318,130 @@ let v081NoteActive=v081Notes[0]?.id,v081BankTab="Mobs";
 let v082CreatingBankMob=false;
 function v081Persist(){localStorage.setItem(V081_BANK_KEY,JSON.stringify(v081Banks));localStorage.setItem(V081_NOTES_KEY,JSON.stringify(v081Notes))}
 function v081Entries(){return v081BankTab==="Mobs"?creatureBank:(v081Banks[v081BankTab]||[])}
-function v081BankRender(){
- const tabs=document.getElementById("v081LibraryTabs"),list=document.getElementById("v081LibraryList");tabs.innerHTML="";list.innerHTML="";
- ["Mobs","Items","Spells","Abilities","Effects"].forEach(name=>{const b=button(name,v081BankTab===name?"primary":"",()=>{v081BankTab=name;v081BankRender()});if(name===v081BankTab)b.classList.add("selected");tabs.append(b)});
- const entries=v081Entries();if(!entries.length)list.innerHTML='<div class="hint">No saved templates yet. Create one below or save a session creature to the bank.</div>';
- entries.forEach(entry=>{const row=document.createElement("div");row.className="library-entry";const label=document.createElement("div");const nm=document.createElement("strong");nm.textContent=entry.name;const desc=document.createElement("div");desc.className="hint";desc.textContent=v081BankTab==="Mobs"?`${entry.type} · ${entry.mobHPMax||10} HP`:(entry.description||entry.reference||entry.mode||"");label.append(nm,desc);const controls=document.createElement("div");controls.className="controls";
- if(v081BankTab==="Mobs"){
- controls.append(button("DEPLOY","primary",()=>{const qty=entry.type==="Mob"?prompt("Quantity",String(entry.quantity||1)):"1";if(qty===null)return;const e=cloneCreature(entry);if(e.type==="Mob"){e.quantity=Math.max(1,Math.min(99,Math.floor(Number(qty)||1)));e.mobHP=Array(e.quantity).fill(e.mobHPMax||10)}entities.push(e);saveAll();render();toast(`${e.name} deployed`)}));
- controls.append(button("EDIT","",()=>{const next=prompt("Template name",entry.name);if(next===null)return;entry.name=next.trim()||entry.name;const hp=prompt("HP per creature",String(entry.mobHPMax||10));if(hp!==null)entry.mobHPMax=Math.max(1,Number(hp)||10);const ac=prompt("Base AC",String(entry.ac??8));if(ac!==null)entry.ac=Number(ac)||0;saveCreatureBank();v081BankRender()}));
- }else{
- controls.append(button("EDIT","",()=>v081EditEntry(entry)));
- if(v081BankTab==="Effects")controls.append(button("APPLY","primary",()=>v081ApplyEffect(entry)));
- else controls.append(button("ASSIGN","primary",()=>v081Assign(entry)));
- }
- controls.append(button("DUPLICATE","",()=>{const c=JSON.parse(JSON.stringify(entry));c.id=uid();c.bankId=uid();c.name+=" (copy)";entries.push(c);v081Persist();saveCreatureBank();v081BankRender()}));
- controls.append(button("DELETE","danger",()=>{if(!confirm(`Delete ${entry.name} template?`))return;const idx=entries.indexOf(entry);if(idx>=0)entries.splice(idx,1);v081Persist();saveCreatureBank();v081BankRender()}));row.append(label,controls);list.append(row)});
+// v0.8.3: Native prompt()/confirm() inside a modal can be blocked or feel unresponsive.
+// Use explicit editor, target and confirmation dialogs for the entire Library workflow.
+let v083Edit=null,v083Target=null,v083Delete=null;
+const v083LibraryDialog=()=>document.getElementById("v081LibraryDialog");
+function v083Show(id){v083LibraryDialog().close();document.getElementById(id).showModal()}
+function v083Back(id){document.getElementById(id).close();v081BankRender();v083LibraryDialog().showModal()}
+function v083Field(label,key,value,type="text"){
+ const wrap=document.createElement("label");wrap.style.display="block";wrap.style.margin="9px 0";wrap.textContent=label;
+ const input=type==="textarea"?document.createElement("textarea"):document.createElement("input");
+ if(type!=="textarea")input.type=type;input.dataset.field=key;input.value=value??"";
+ input.style.width="100%";wrap.append(input);return wrap;
 }
-function v081EditEntry(entry){const name=prompt("Template name",entry.name);if(name===null)return;entry.name=name.trim()||entry.name;const description=prompt("Description / dice reference",entry.description||entry.reference||"");if(description!==null)entry.description=description;
- if(v081BankTab==="Effects"){
- const mode=prompt("Effect mode: ac, stat, rate, pulse, hp, condition",entry.mode||"ac");if(mode!==null)entry.mode=["ac","stat","rate","pulse","hp","condition"].includes(mode.toLowerCase())?mode.toLowerCase():"condition";
- const target=prompt("Target statistic (AC, STR, DEX, CON, INT, WIS, CHA)",entry.target||"AC");if(target!==null)entry.target=target.toUpperCase();
- const amount=prompt("Modifier amount (e.g. -3 AC, +2 HP)",String(entry.amount||0));if(amount!==null)entry.amount=Number(amount)||0;
- const interval=prompt("Pulse interval in seconds",String(entry.interval||10));if(interval!==null)entry.interval=Math.max(1,Number(interval)||10);
- const duration=prompt("Duration seconds (0 = indefinite)",String(entry.duration||0));if(duration!==null)entry.duration=Math.max(0,Number(duration)||0);
+function v083OpenEditor(entry,isNew=false){
+ const tab=v081BankTab;
+ v083Edit={entry,tab,isNew};
+ const title=document.getElementById("v083EditorTitle"),fields=document.getElementById("v083EditorFields");fields.replaceChildren();
+ title.textContent=`${isNew?"New":"Edit"} ${tab.slice(0,-1)} template`;
+ fields.append(v083Field("Name","name",entry.name||""));
+ if(tab==="Mobs"){
+  fields.append(v083Field("Hit points per creature","mobHPMax",entry.mobHPMax??10,"number"));
+  fields.append(v083Field("Base armour class","ac",entry.ac??8,"number"));
+  fields.append(v083Field("Default quantity","quantity",entry.quantity??1,"number"));
  }else{
- const time=prompt("Time cost (seconds)",String(entry.timeCost||0));if(time!==null)entry.timeCost=Math.max(0,Number(time)||0);
- const cooldown=prompt("Cooldown (seconds)",String(entry.cooldown||0));if(cooldown!==null)entry.cooldown=Math.max(0,Number(cooldown)||0);
+  fields.append(v083Field("Description / dice reference","description",entry.description||entry.reference||"","textarea"));
+  if(tab==="Effects"){
+   const wrap=document.createElement("label");wrap.textContent="Effect mode";wrap.style.display="block";
+   const select=document.createElement("select");select.dataset.field="mode";
+   for(const x of ["ac","stat","rate","pulse","hp","condition"]){const o=document.createElement("option");o.value=x;o.textContent=x.toUpperCase();select.append(o)}
+   select.value=entry.mode||"ac";wrap.append(select);fields.append(wrap);
+   fields.append(v083Field("Target statistic (AC, STR, DEX, etc.)","target",entry.target||"AC"));
+   fields.append(v083Field("Modifier amount","amount",entry.amount??0,"number"));
+   fields.append(v083Field("Pulse interval (seconds)","interval",entry.interval??10,"number"));
+   fields.append(v083Field("Duration (seconds; 0 = indefinite)","duration",entry.duration??0,"number"));
+  }else{
+   fields.append(v083Field("Time cost (seconds)","timeCost",entry.timeCost??0,"number"));
+   fields.append(v083Field("Cooldown (seconds)","cooldown",entry.cooldown??0,"number"));
+   fields.append(v083Field("Maximum uses (blank = unlimited)","maxUses",entry.maxUses??"","number"));
+  }
  }
- v081Persist();v081BankRender()}
-function v081Assign(entry){const who=prompt("Assign to player 1–4, or enter a creature name", "1");if(who===null)return;const ix=Number(who)-1,t=timers[ix],e=entities.find(x=>x.name.toLowerCase()===who.toLowerCase());if(t){const a={...JSON.parse(JSON.stringify(entry)),id:uid(),kind:v081BankTab.slice(0,-1),reference:entry.description||entry.reference||"",cooldownRemaining:0,currentUses:entry.maxUses??""};t.playerActions=t.playerActions||[];t.playerActions.push(a)}else if(e){e.actions=e.actions||[];e.actions.push({id:uid(),name:entry.name,reference:entry.description||"",attackMod:"",damageDice:"",rollDice:""})}else{toast("No matching player or creature");return}saveAll();render();toast(`${entry.name} assigned`)}
-function v081ApplyEffect(entry){const who=prompt("Apply to player 1–4, or enter a creature name", "1");if(who===null)return;const target=timers[Number(who)-1]||entities.find(x=>x.name.toLowerCase()===who.toLowerCase());if(!target){toast("Target not found");return}target.effects=target.effects||[];target.effects.push({...JSON.parse(JSON.stringify(entry)),id:uid(),remainingDuration:Number(entry.duration)||0,pulseElapsed:0});saveAll();render();toast(`${entry.name} applied`)}
+ v083Show("v083EditorDialog");
+ const name=fields.querySelector('[data-field="name"]');if(name)name.focus();
+}
+function v083SaveEditor(){
+ const ctx=v083Edit;if(!ctx)return;
+ const fields=document.getElementById("v083EditorFields");
+ const get=k=>fields.querySelector(`[data-field="${k}"]`)?.value;
+ const name=(get("name")||"").trim();if(!name){fields.querySelector('[data-field="name"]').focus();return}
+ const e=ctx.entry;e.name=name;
+ if(ctx.tab==="Mobs"){
+  e.mobHPMax=Math.max(1,Number(get("mobHPMax"))||10);
+  e.ac=Number(get("ac"))||0;
+  e.quantity=Math.max(1,Math.min(99,Math.floor(Number(get("quantity"))||1)));
+ }else{
+  e.description=get("description")||"";
+  if(ctx.tab==="Effects"){
+   e.mode=get("mode")||"ac";e.target=(get("target")||"AC").toUpperCase();
+   e.amount=Number(get("amount"))||0;e.interval=Math.max(1,Number(get("interval"))||10);e.duration=Math.max(0,Number(get("duration"))||0);
+  }else{
+   e.timeCost=Math.max(0,Number(get("timeCost"))||0);e.cooldown=Math.max(0,Number(get("cooldown"))||0);
+   e.maxUses=get("maxUses")===""?"":Math.max(0,Math.floor(Number(get("maxUses"))||0));
+  }
+  if(ctx.isNew)v081Banks[ctx.tab].push(e);
+ }
+ v081Persist();saveCreatureBank();v083Edit=null;v083Back("v083EditorDialog");toast(`${name} saved to ${ctx.tab}`);
+}
+function v083OpenTarget(entry,tab){
+ v083Target={entry,tab};const sel=document.getElementById("v083TargetSelect");sel.replaceChildren();
+ const add=(value,label)=>{const opt=document.createElement("option");opt.value=value;opt.textContent=label;sel.append(opt)};
+ timers.forEach(t=>add(`player:${t.id}`,`Player: ${t.name}`));
+ entities.forEach(e=>add(`entity:${e.id}`,`Creature: ${e.name}`));
+ if(!sel.options.length){toast("Add a player or creature first");return}
+ document.getElementById("v083TargetTitle").textContent=`${tab==="Effects"?"Apply":"Assign"} ${entry.name}`;
+ v083Show("v083TargetDialog");
+}
+function v083SaveTarget(){
+ const ctx=v083Target;if(!ctx)return;const [kind,id]=document.getElementById("v083TargetSelect").value.split(":");
+ const target=kind==="player"?timers.find(t=>t.id===id):entities.find(e=>e.id===id);
+ if(!target){toast("Target no longer exists");return}
+ const e=ctx.entry;
+ if(ctx.tab==="Effects"){
+  target.effects=target.effects||[];
+  target.effects.push({...JSON.parse(JSON.stringify(e)),id:uid(),remainingDuration:Number(e.duration)||0,pulseElapsed:0});
+ }else if(kind==="player"){
+  const a={...JSON.parse(JSON.stringify(e)),id:uid(),kind:ctx.tab.slice(0,-1),reference:e.description||e.reference||"",cooldownRemaining:0,currentUses:e.maxUses??""};
+  target.playerActions=target.playerActions||[];target.playerActions.push(a);
+ }else{
+  target.actions=target.actions||[];target.actions.push({id:uid(),name:e.name,reference:e.description||"",attackMod:"",damageDice:"",rollDice:""});
+ }
+ saveAll();render();v083Target=null;v083Back("v083TargetDialog");toast(`${e.name} ${ctx.tab==="Effects"?"applied":"assigned"} to ${target.name}`);
+}
+function v083OpenDelete(entry,tab){v083Delete={entry,tab};document.getElementById("v083DeleteText").textContent=`Delete “${entry.name}” from ${tab}? Existing assigned copies will remain.`;v083Show("v083DeleteDialog")}
+function v083ConfirmDelete(){
+ const ctx=v083Delete;if(!ctx)return;const entries=ctx.tab==="Mobs"?creatureBank:v081Banks[ctx.tab];
+ const ix=entries.indexOf(ctx.entry);if(ix>=0)entries.splice(ix,1);
+ v081Persist();saveCreatureBank();v083Delete=null;v083Back("v083DeleteDialog");toast("Template deleted");
+}
+function v081BankRender(){
+ const tabs=document.getElementById("v081LibraryTabs"),list=document.getElementById("v081LibraryList");tabs.replaceChildren();list.replaceChildren();
+ ["Mobs","Items","Spells","Abilities","Effects"].forEach(name=>{const b=button(name,v081BankTab===name?"primary":"",()=>{v081BankTab=name;v081BankRender()});tabs.append(b)});
+ const tab=v081BankTab,entries=v081Entries();
+ if(!entries.length){const empty=document.createElement("div");empty.className="hint";empty.textContent="No saved templates yet. Use + NEW to create one.";list.append(empty)}
+ entries.forEach(entry=>{
+  const row=document.createElement("div");row.className="library-entry";
+  const label=document.createElement("div"),nm=document.createElement("strong"),desc=document.createElement("div");
+  nm.textContent=entry.name||"Unnamed";desc.className="hint";
+  desc.textContent=tab==="Mobs"?`${entry.type||"Mob"} · ${entry.mobHPMax||10} HP`:(entry.description||entry.reference||entry.mode||"");
+  label.append(nm,desc);const controls=document.createElement("div");controls.className="controls";
+  if(tab==="Mobs"){
+   controls.append(button("DEPLOY","primary",()=>{
+    const ent=cloneCreature(entry);entities.push(ent);saveAll();render();toast(`${ent.name} deployed (${ent.quantity||1})`);
+   }));
+  }else controls.append(button(tab==="Effects"?"APPLY":"ASSIGN","primary",()=>v083OpenTarget(entry,tab)));
+  controls.append(button("EDIT","",()=>v083OpenEditor(entry)));
+  controls.append(button("DUPLICATE","",()=>{
+   const copy=JSON.parse(JSON.stringify(entry));copy.id=uid();copy.bankId=uid();copy.name=(entry.name||"Template")+" (copy)";
+   entries.push(copy);v081Persist();saveCreatureBank();v081BankRender();toast("Template duplicated");
+  }));
+  controls.append(button("DELETE","danger",()=>v083OpenDelete(entry,tab)));
+  row.append(label,controls);list.append(row);
+ });
+}
+function v081EditEntry(entry){v083OpenEditor(entry)}
+function v081Assign(entry){v083OpenTarget(entry,v081BankTab)}
+function v081ApplyEffect(entry){v083OpenTarget(entry,"Effects")}
 function v081NotesRender(){const tabs=document.getElementById("v081NoteTabs");tabs.innerHTML="";v081Notes.forEach(p=>tabs.append(button(p.name,p.id===v081NoteActive?"primary":"",()=>{v081NoteSave();v081NoteActive=p.id;v081NotesRender()})));const page=v081Notes.find(p=>p.id===v081NoteActive);document.getElementById("v081NoteTitle").value=page?.name||"";document.getElementById("v081NoteBody").value=page?.text||""}
 function v081NoteSave(){const page=v081Notes.find(p=>p.id===v081NoteActive);if(!page)return;page.name=document.getElementById("v081NoteTitle").value.trim()||"Page";page.text=document.getElementById("v081NoteBody").value;v081Persist()}
 function loadTimeline(){try{return JSON.parse(localStorage.getItem(TIMELINE_KEY)||"[]").map(x=>({...x,running:false,startedAt:null,startRemaining:null}))}catch(e){return[]}}
@@ -641,7 +739,7 @@ function exportSave(){
  const savedTimers=timers.map(t=>{const x=JSON.parse(JSON.stringify(t));x.remaining=effective(t,now);x.running=false;x.startedAt=null;x.startRemaining=null;return x});
  const savedTimeline=timeline.map(t=>{const x=JSON.parse(JSON.stringify(t));x.remaining=timelineEffective(t,now);x.running=false;x.startedAt=null;x.startRemaining=null;return x});
  const savedEntities=JSON.parse(JSON.stringify(entities));savedEntities.forEach(e=>{(e.components||[]).forEach(c=>{if(c.kind==="timer"){const live=entities.find(z=>z.id===e.id)?.components?.find(z=>z.id===c.id);if(live){c.value=compEffective(live,now);c.running=false;c.startedAt=null;c.startValue=null}}});if(e.initiative?.interval){const live=entities.find(z=>z.id===e.id);e.initiative.remaining=initiativeEffective(live,now);e.initiative.running=false;e.initiative.startedAt=null;e.initiative.startRemaining=null}});
- const payload={format:"BattleClockSave",version:"0.8.1",exportedAt:new Date().toISOString(),game,timers:savedTimers,entities:savedEntities,creatureBank,v081Banks,v081Notes,v08,timeline:savedTimeline,events};
+ const payload={format:"BattleClockSave",version:"0.8.3",exportedAt:new Date().toISOString(),game,timers:savedTimers,entities:savedEntities,creatureBank,v081Banks,v081Notes,v08,timeline:savedTimeline,events};
  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`BattleClock-save-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast("BattleClock save exported.")
 }
 function importSaveFile(file){
@@ -704,7 +802,13 @@ document.getElementById("renameForm").addEventListener("submit",e=>{if(e.submitt
 document.getElementById("timeForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingId);if(t)setTime(t,(Number(document.getElementById("minutes").value)||0)*60+(Number(document.getElementById("seconds").value)||0));document.getElementById("timeDialog").close()});
 document.getElementById("addEntity").onclick=()=>openEntityBuilder();document.getElementById("creatureBank").onclick=()=>{v081BankRender();document.getElementById("v081LibraryDialog").showModal()};
 document.getElementById("entityDialog").addEventListener("close",()=>{v082CreatingBankMob=false});
-document.getElementById("v081NewEntry").onclick=()=>{if(v081BankTab==="Mobs"){document.getElementById("v081LibraryDialog").close();v082CreatingBankMob=true;openEntityBuilder();document.getElementById("entityType").value="Mob";document.getElementById("entityDialogTitle").textContent="New Mob Template (save to bank)";return}const name=prompt(`New ${v081BankTab.slice(0,-1)} name`);if(!name)return;const entry={id:uid(),name,description:"",timeCost:0,cooldown:0,mode:"ac",target:"AC",amount:0,interval:10,duration:0};v081Banks[v081BankTab].push(entry);v081EditEntry(entry)};
+document.getElementById("v081NewEntry").onclick=()=>{if(v081BankTab==="Mobs"){document.getElementById("v081LibraryDialog").close();v082CreatingBankMob=true;openEntityBuilder();document.getElementById("entityType").value="Mob";document.getElementById("entityDialogTitle").textContent="New Mob Template (save to bank)";return}const entry={id:uid(),name:"",description:"",timeCost:0,cooldown:0,mode:"ac",target:"AC",amount:0,interval:10,duration:0};v083OpenEditor(entry,true)};
+document.getElementById("v083EditorForm").addEventListener("submit",e=>{e.preventDefault();v083SaveEditor()});
+document.getElementById("v083EditorCancel").onclick=()=>{v083Edit=null;v083Back("v083EditorDialog")};
+document.getElementById("v083TargetForm").addEventListener("submit",e=>{e.preventDefault();v083SaveTarget()});
+document.getElementById("v083TargetCancel").onclick=()=>{v083Target=null;v083Back("v083TargetDialog")};
+document.getElementById("v083DeleteCancel").onclick=()=>{v083Delete=null;v083Back("v083DeleteDialog")};
+document.getElementById("v083DeleteConfirm").onclick=v083ConfirmDelete;
 document.getElementById("dmNotepad").onclick=()=>{v081NotesRender();document.getElementById("v081NoteDialog").showModal()};
 document.getElementById("v081AddNote").onclick=()=>{v081NoteSave();const p={id:uid(),name:`Page ${v081Notes.length+1}`,text:""};v081Notes.push(p);v081NoteActive=p.id;v081Persist();v081NotesRender()};
 document.getElementById("v081DeleteNote").onclick=()=>{if(v081Notes.length<=1)return;const p=v081Notes.find(x=>x.id===v081NoteActive);if(!confirm(`Delete ${p?.name}?`))return;v081Notes=v081Notes.filter(x=>x.id!==v081NoteActive);v081NoteActive=v081Notes[0].id;v081Persist();v081NotesRender()};
