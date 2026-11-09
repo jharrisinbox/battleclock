@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BattleClock v0.8.1</title>
+<title>BattleClock v0.8.2</title>
 <style>
 :root{--bg:#15171a;--panel:#24282d;--panel2:#1c1f23;--text:#f3f4f6;--muted:#aeb4bd;--border:#444b55;--run:#43d17a;--danger:#ff5c5c}
 *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
@@ -120,7 +120,7 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 .bank-card{border:1px solid #303945;border-radius:10px;padding:10px;background:#11171e}.bank-card strong{font-size:16px}
 @media(max-width:1200px){#players{grid-template-columns:repeat(2,minmax(280px,1fr))!important}}
 
-/* v0.8.1 bugfixes */
+/* v0.8.2 bugfixes */
 .ability{min-width:0}.ability span{display:flex;align-items:baseline;justify-content:center;gap:5px;white-space:nowrap}
 .ability .stat-base{color:#fff;font-weight:900}.ability .stat-mod{color:#fff;font-weight:800}.ability .stat-temp{color:#62c9ff;font-weight:900}
 .turn-banner{font-size:15px!important;letter-spacing:.04em;background:transparent!important;border:0!important;padding:3px!important;margin:3px 0!important}
@@ -130,14 +130,14 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 .mob-initiative-clock{font-variant-numeric:tabular-nums}
 .v08-panel{background:#151d25;border:1px solid #394554;border-radius:12px;padding:10px;margin:10px 0}.v08-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}.v08-head strong{margin-right:auto}.v08-line{display:flex;align-items:center;gap:8px;padding:5px 7px;border-bottom:1px solid #303945;font-size:12px}.v08-line span{flex:1}.v08-line b{min-width:85px;text-align:right}.v08-current{background:#173d2a;border-radius:6px}.v08-line button{padding:4px 7px}#v08Players{margin-top:12px}
 
-/* v0.8.1 dashboard refinements */
+/* v0.8.2 dashboard refinements */
 .dice-panel{padding:7px 10px!important;margin:7px 0!important}.dice-panel .sub{display:none}.dice-controls{gap:4px!important}.dice-controls button{padding:5px 7px!important}.dice-result,.dice-expression{display:inline-block!important;margin:2px 8px!important;font-size:12px!important}
 .library-tabs{display:flex;gap:5px;flex-wrap:wrap;margin:10px 0}.library-tabs button.selected{background:#315b83;border-color:#6ea7e2}.library-entry{border:1px solid #424b54;padding:9px;border-radius:8px;margin:5px 0;display:flex;justify-content:space-between;align-items:center;gap:8px}.library-entry .controls{display:flex;gap:5px;flex-wrap:wrap}.note-area{width:100%;min-height:260px;font:14px ui-monospace,monospace;white-space:pre-wrap;tab-size:4}.effect-chip{display:inline-block;margin:3px;padding:4px 6px;border-radius:6px;border:1px solid #596475;background:#242b34;font-size:11px}.v081-leak{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.v081-leak input{width:160px}.v081-engaged{width:145px!important;font-size:12px}.v081-dice-hit{border:1px solid #4776ae;border-radius:7px;padding:5px;background:#183047}.v081-dice-damage{border:1px solid #af594b;border-radius:7px;padding:5px;background:#422522}
 </style>
 </head>
 <body>
 <header>
-<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.8.1</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
+<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.8.2</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
 <div class="header-buttons">
 <span id="partyStatus" class="party-status">PARTY VIEW OFFLINE</span>
 <button id="partyConnect">CONNECT PARTY VIEW</button>
@@ -277,6 +277,8 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 </form>
 </dialog>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<dialog id="v081LibraryDialog" class="builder"><h3>BattleClock Library</h3><div id="v081LibraryTabs" class="library-tabs"></div><div id="v081LibraryList"></div><div class="dialog-buttons"><button id="v081NewEntry" class="primary">+ NEW</button><button onclick="document.getElementById('v081LibraryDialog').close()">CLOSE</button></div></dialog>
+<dialog id="v081NoteDialog" class="builder"><h3>DM Notepad</h3><div class="hint">DM only · Automatically saved · Included in game exports · Paste tab-separated Excel data as text</div><div id="v081NoteTabs" class="library-tabs"></div><div style="display:flex;gap:7px;margin:8px 0"><input id="v081NoteTitle" placeholder="Page name" style="flex:1"><button id="v081AddNote">+ PAGE</button><button id="v081DeleteNote">DELETE PAGE</button></div><textarea id="v081NoteBody" class="note-area" spellcheck="false"></textarea><div class="dialog-buttons"><button onclick="document.getElementById('v081NoteDialog').close()">CLOSE</button></div></dialog>
 <script>
 (()=>{
 const STORAGE_KEY="battleClock_v02", ENTITY_KEY="battleClock_entities_v02", GAME_KEY="battleClock_game_v02", EVENT_KEY="battleClock_events_v02";
@@ -304,11 +306,12 @@ function saveCreatureToBank(e){const copy=JSON.parse(JSON.stringify(e));copy.ban
 function renderCreatureBank(){const h=document.getElementById("creatureBankList");h.innerHTML="";if(!creatureBank.length){h.innerHTML='<div class="empty" style="grid-column:1/-1">Creature Bank is empty. Build a creature in Session Entities, then use SAVE TO BANK.</div>';return}creatureBank.forEach(c=>{const d=document.createElement("div");d.className="bank-card";d.innerHTML=`<strong>${escapeHtml(c.name)}</strong><div class="sub">${escapeHtml(c.type)}${c.type==="Mob"?` · ×${c.quantity||1} · ${c.mobHPMax||10} HP`:""}</div>`;d.append(button("DEPLOY","primary",()=>{const count=c.type==="Mob"?prompt(`How many ${c.name} to deploy?`,String(c.quantity||1)):null;if(c.type==="Mob"&&count===null)return;const ent=cloneCreature(c);if(c.type==="Mob"){ent.quantity=Math.max(1,Math.min(99,Math.floor(Number(count)||1)));ent.mobHP=Array(ent.quantity).fill(Math.max(1,Number(ent.mobHPMax)||10))}entities.push(ent);saveAll();render();toast(`${c.name} deployed.`)}),button("DELETE","danger",()=>{if(confirm(`Delete ${c.name} from Creature Bank?`)){creatureBank=creatureBank.filter(x=>x.bankId!==c.bankId);saveCreatureBank();renderCreatureBank()}}));h.append(d)})}
 
 
-// v0.8.1: reusable templates are kept separate from live instances.
+// v0.8.2: reusable templates are kept separate from live instances.
 const V081_BANK_KEY="battleClock_v081_banks",V081_NOTES_KEY="battleClock_v081_notes";
 let v081Banks=(()=>{try{return Object.assign({Items:[],Spells:[],Abilities:[],Effects:[]},JSON.parse(localStorage.getItem(V081_BANK_KEY)||"{}"))}catch(_){return{Items:[],Spells:[],Abilities:[],Effects:[]}}})();
 let v081Notes=(()=>{try{return JSON.parse(localStorage.getItem(V081_NOTES_KEY)||"null")||[{id:uid(),name:"Encounter",text:""}]}catch(_){return[{id:uid(),name:"Encounter",text:""}]}})();
 let v081NoteActive=v081Notes[0]?.id,v081BankTab="Mobs";
+let v082CreatingBankMob=false;
 function v081Persist(){localStorage.setItem(V081_BANK_KEY,JSON.stringify(v081Banks));localStorage.setItem(V081_NOTES_KEY,JSON.stringify(v081Notes))}
 function v081Entries(){return v081BankTab==="Mobs"?creatureBank:(v081Banks[v081BankTab]||[])}
 function v081BankRender(){
@@ -384,7 +387,7 @@ function renderPlayerQueue(){let h=document.getElementById("v08Players");if(!h){
 function publicSnapshot(){
  const now=Date.now();
  return{
-  version:3,published_at:now,playerQueue:timers.map(t=>({id:t.id,name:t.name,status:playerQueueStatus(t)})),mobQueue:{active:v08.mobActive,running:v08.mobRunning,order:v08.mobOrder.map(id=>{const e=entities.find(x=>x.id===id);return e?{id,name:e.name,quantity:e.quantity||1,engagedWith:e.engagedWith||"",remaining:initiativeEffective(e,now),running:!!e.initiative?.running}:null}).filter(Boolean)},
+  version:3,published_at:now,processedCommands:Object.fromEntries(processedPlayerCommands),playerQueue:timers.map(t=>({id:t.id,name:t.name,status:playerQueueStatus(t)})),mobQueue:{active:v08.mobActive,running:v08.mobRunning,order:v08.mobOrder.map(id=>{const e=entities.find(x=>x.id===id);return e?{id,name:e.name,quantity:e.quantity||1,engagedWith:e.engagedWith||"",remaining:initiativeEffective(e,now),running:!!e.initiative?.running}:null}).filter(Boolean)},
   players:timers.map(t=>({
    id:t.id,name:t.name,color:t.color||"#43d17a",
    remaining:effective(t,now),running:!!t.running,rate:timeRate(t),turnState:t.turnState||"active",
@@ -685,7 +688,7 @@ function addActionRow(a={id:uid(),name:"Action",reference:"",attackMod:"",damage
 function openEntityBuilder(e=null){
  if(!document.getElementById("v08EngagedWith")){const field=document.createElement("label");field.textContent="Engaged With (free text)";const input=document.createElement("input");input.id="v08EngagedWith";input.placeholder="Player, mob or NPC";field.append(input);document.getElementById("entityQuantity").parentElement.after(field)}
  const target=document.getElementById("v08EngagedWith");if(target)target.value=e?.engagedWith||"";
- editingEntityId=e?.id||null;document.getElementById("entityDialogTitle").textContent=e?"Edit Entity":"Add Entity";document.getElementById("entityName").value=e?.name||"New Entity";document.getElementById("entityType").value=e?.type||"NPC";document.getElementById("entityVisible").checked=e?.visible!==false;document.getElementById("entityQuantity").value=Math.max(1,Number(e?.quantity)||1);document.getElementById("entityMobHP").value=Math.max(1,Number(e?.mobHPMax)||10);document.getElementById("v081EntityAC").value=e?.ac??8;const ii=Number(e?.initiative?.interval)||0;document.getElementById("entityInitMin").value=Math.floor(ii/60);document.getElementById("entityInitSec").value=ii%60;document.getElementById("componentBuilder").innerHTML="";document.getElementById("actionBuilder").innerHTML="";
+ editingEntityId=e?.id||null;document.getElementById("entityDialogTitle").textContent=e?"Edit Entity":"Add Entity";document.getElementById("entityName").value=e?.name||"New Entity";document.getElementById("entityType").value=e?.type||"NPC";document.getElementById("v081EntityAC").value=e?.ac??8;document.getElementById("entityVisible").checked=e?.visible!==false;document.getElementById("entityQuantity").value=Math.max(1,Number(e?.quantity)||1);document.getElementById("entityMobHP").value=Math.max(1,Number(e?.mobHPMax)||10);document.getElementById("v081EntityAC").value=e?.ac??8;const ii=Number(e?.initiative?.interval)||0;document.getElementById("entityInitMin").value=Math.floor(ii/60);document.getElementById("entityInitSec").value=ii%60;document.getElementById("componentBuilder").innerHTML="";document.getElementById("actionBuilder").innerHTML="";
  (e?.components||[]).forEach(addComponentRow);(e?.actions||[]).forEach(addActionRow);document.getElementById("entityDialog").showModal();
 }
 function collectEntity(){
@@ -700,7 +703,8 @@ function collectEntity(){
 document.getElementById("renameForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===renamingId);if(t){t.name=document.getElementById("renameInput").value.trim()||"Player";saveAll();render()}document.getElementById("renameDialog").close()});
 document.getElementById("timeForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingId);if(t)setTime(t,(Number(document.getElementById("minutes").value)||0)*60+(Number(document.getElementById("seconds").value)||0));document.getElementById("timeDialog").close()});
 document.getElementById("addEntity").onclick=()=>openEntityBuilder();document.getElementById("creatureBank").onclick=()=>{v081BankRender();document.getElementById("v081LibraryDialog").showModal()};
-document.getElementById("v081NewEntry").onclick=()=>{if(v081BankTab==="Mobs"){document.getElementById("v081LibraryDialog").close();openEntityBuilder();document.getElementById("entityType").value="Mob";return}const name=prompt(`New ${v081BankTab.slice(0,-1)} name`);if(!name)return;const entry={id:uid(),name,description:"",timeCost:0,cooldown:0,mode:"ac",target:"AC",amount:0,interval:10,duration:0};v081Banks[v081BankTab].push(entry);v081EditEntry(entry)};
+document.getElementById("entityDialog").addEventListener("close",()=>{v082CreatingBankMob=false});
+document.getElementById("v081NewEntry").onclick=()=>{if(v081BankTab==="Mobs"){document.getElementById("v081LibraryDialog").close();v082CreatingBankMob=true;openEntityBuilder();document.getElementById("entityType").value="Mob";document.getElementById("entityDialogTitle").textContent="New Mob Template (save to bank)";return}const name=prompt(`New ${v081BankTab.slice(0,-1)} name`);if(!name)return;const entry={id:uid(),name,description:"",timeCost:0,cooldown:0,mode:"ac",target:"AC",amount:0,interval:10,duration:0};v081Banks[v081BankTab].push(entry);v081EditEntry(entry)};
 document.getElementById("dmNotepad").onclick=()=>{v081NotesRender();document.getElementById("v081NoteDialog").showModal()};
 document.getElementById("v081AddNote").onclick=()=>{v081NoteSave();const p={id:uid(),name:`Page ${v081Notes.length+1}`,text:""};v081Notes.push(p);v081NoteActive=p.id;v081Persist();v081NotesRender()};
 document.getElementById("v081DeleteNote").onclick=()=>{if(v081Notes.length<=1)return;const p=v081Notes.find(x=>x.id===v081NoteActive);if(!confirm(`Delete ${p?.name}?`))return;v081Notes=v081Notes.filter(x=>x.id!==v081NoteActive);v081NoteActive=v081Notes[0].id;v081Persist();v081NotesRender()};
@@ -708,7 +712,7 @@ document.getElementById("v081NoteTitle").addEventListener("input",v081NoteSave);
 document.getElementById("v081NoteBody").addEventListener("input",v081NoteSave);
 document.querySelectorAll("[data-add-component]").forEach(b=>b.onclick=()=>addComponentRow(componentDefaults(b.dataset.addComponent)));
 document.getElementById("addActionRow").onclick=()=>addActionRow();
-document.getElementById("entityForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const ent=collectEntity();ent.engagedWith=document.getElementById("v08EngagedWith")?.value.trim()||"";if(editingEntityId){const i=entities.findIndex(x=>x.id===editingEntityId);entities[i]=ent;logEvent(`${ent.name} updated`)}else{entities.push(ent);logEvent(`${ent.name} added`)}saveAll();render();document.getElementById("entityDialog").close()});
+document.getElementById("entityForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel"){v082CreatingBankMob=false;return}e.preventDefault();const ent=collectEntity();if(v082CreatingBankMob){v082CreatingBankMob=false;saveCreatureToBank(ent);v081BankRender();document.getElementById("entityDialog").close();document.getElementById("v081LibraryDialog").showModal();return}ent.engagedWith=document.getElementById("v08EngagedWith")?.value.trim()||"";if(editingEntityId){const i=entities.findIndex(x=>x.id===editingEntityId);entities[i]=ent;logEvent(`${ent.name} updated`)}else{entities.push(ent);logEvent(`${ent.name} added`)}saveAll();render();document.getElementById("entityDialog").close()});
 document.getElementById("playersToggle").onclick=()=>setPlayersRunning(!playersRunning);
 document.getElementById("eventsToggle").onclick=()=>setEventsRunning(!eventsRunning);
 document.getElementById("pauseAll").onclick=()=>{const run=!(playersRunning&&eventsRunning);setPlayersRunning(run);setEventsRunning(run);updateGroupButtons()};
@@ -831,7 +835,6 @@ try{render();renderTimeline();updateGroupButtons()}catch(err){
 }
 })();
 </script>
-<dialog id="v081LibraryDialog" class="builder"><h3>BattleClock Library</h3><div id="v081LibraryTabs" class="library-tabs"></div><div id="v081LibraryList"></div><div class="dialog-buttons"><button id="v081NewEntry" class="primary">+ NEW</button><button onclick="document.getElementById('v081LibraryDialog').close()">CLOSE</button></div></dialog>
-<dialog id="v081NoteDialog" class="builder"><h3>DM Notepad</h3><div class="hint">DM only · Automatically saved · Included in game exports · Paste tab-separated Excel data as text</div><div id="v081NoteTabs" class="library-tabs"></div><div style="display:flex;gap:7px;margin:8px 0"><input id="v081NoteTitle" placeholder="Page name" style="flex:1"><button id="v081AddNote">+ PAGE</button><button id="v081DeleteNote">DELETE PAGE</button></div><textarea id="v081NoteBody" class="note-area" spellcheck="false"></textarea><div class="dialog-buttons"><button onclick="document.getElementById('v081NoteDialog').close()">CLOSE</button></div></dialog>
+
 </body>
 </html>
