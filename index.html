@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BattleClock v0.8.4</title>
+<title>BattleClock v0.8.2</title>
 <style>
 :root{--bg:#15171a;--panel:#24282d;--panel2:#1c1f23;--text:#f3f4f6;--muted:#aeb4bd;--border:#444b55;--run:#43d17a;--danger:#ff5c5c}
 *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
@@ -137,7 +137,7 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 </head>
 <body>
 <header>
-<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.8.4</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
+<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.8.2</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
 <div class="header-buttons">
 <span id="partyStatus" class="party-status">PARTY VIEW OFFLINE</span>
 <button id="partyConnect">CONNECT PARTY VIEW</button>
@@ -353,6 +353,13 @@ function v083OpenEditor(entry,isNew=false){
    fields.append(v083Field("Pulse interval (seconds)","interval",entry.interval??10,"number"));
    fields.append(v083Field("Duration (seconds; 0 = indefinite)","duration",entry.duration??0,"number"));
   }else{
+   fields.append(v083Field("Attack / hit dice (e.g. 1d20)","hitDice",entry.hitDice??entry.rollDice??"1d20"));
+   fields.append(v083Field("Attack modifier","attackModifier",entry.attackModifier??entry.attackMod??0,"number"));
+   fields.append(v083Field("Damage / effect dice (e.g. 3d8)","damageDice",entry.damageDice??""));
+   fields.append(v083Field("Damage modifier","damageModifier",entry.damageModifier??0,"number"));
+   fields.append(v083Field("Saving throw ability (optional)","saveAbility",entry.saveAbility??""));
+   fields.append(v083Field("Saving throw DC (optional)","saveDC",entry.saveDC??"","number"));
+   fields.append(v083Field("Duration (seconds; optional)","duration",entry.duration??0,"number"));
    fields.append(v083Field("Time cost (seconds)","timeCost",entry.timeCost??0,"number"));
    fields.append(v083Field("Cooldown (seconds)","cooldown",entry.cooldown??0,"number"));
    fields.append(v083Field("Maximum uses (blank = unlimited)","maxUses",entry.maxUses??"","number"));
@@ -377,6 +384,11 @@ function v083SaveEditor(){
    e.mode=get("mode")||"ac";e.target=(get("target")||"AC").toUpperCase();
    e.amount=Number(get("amount"))||0;e.interval=Math.max(1,Number(get("interval"))||10);e.duration=Math.max(0,Number(get("duration"))||0);
   }else{
+   e.hitDice=(get("hitDice")||"").trim();e.rollDice=e.hitDice;
+   e.attackModifier=Number(get("attackModifier"))||0;e.attackMod=e.attackModifier;
+   e.damageDice=(get("damageDice")||"").trim();e.damageModifier=Number(get("damageModifier"))||0;
+   e.saveAbility=(get("saveAbility")||"").trim().toUpperCase();e.saveDC=get("saveDC")===""?"":Number(get("saveDC"))||0;
+   e.duration=Math.max(0,Number(get("duration"))||0);
    e.timeCost=Math.max(0,Number(get("timeCost"))||0);e.cooldown=Math.max(0,Number(get("cooldown"))||0);
    e.maxUses=get("maxUses")===""?"":Math.max(0,Math.floor(Number(get("maxUses"))||0));
   }
@@ -384,6 +396,7 @@ function v083SaveEditor(){
  }
  v081Persist();saveCreatureBank();v083Edit=null;v083Back("v083EditorDialog");toast(`${name} saved to ${ctx.tab}`);
 }
+function v085DiceSummary(e){const hit=e.hitDice?`HIT ${e.hitDice}${Number(e.attackModifier)>0?"+"+e.attackModifier:Number(e.attackModifier)<0?e.attackModifier:""}`:"";const damage=e.damageDice?`DMG ${e.damageDice}${Number(e.damageModifier)>0?"+"+e.damageModifier:Number(e.damageModifier)<0?e.damageModifier:""}`:"";const save=e.saveAbility?`${e.saveAbility} SAVE DC ${e.saveDC||"—"}`:"";return [hit,damage,save].filter(Boolean).join(" · ")}
 function v083OpenTarget(entry,tab){
  v083Target={entry,tab};const sel=document.getElementById("v083TargetSelect");sel.replaceChildren();
  const add=(value,label)=>{const opt=document.createElement("option");opt.value=value;opt.textContent=label;sel.append(opt)};
@@ -402,10 +415,10 @@ function v083SaveTarget(){
   target.effects=target.effects||[];
   target.effects.push({...JSON.parse(JSON.stringify(e)),id:uid(),remainingDuration:Number(e.duration)||0,pulseElapsed:0});
  }else if(kind==="player"){
-  const a={...JSON.parse(JSON.stringify(e)),id:uid(),kind:ctx.tab.slice(0,-1),reference:e.description||e.reference||"",cooldownRemaining:0,currentUses:e.maxUses??""};
+  const a={...JSON.parse(JSON.stringify(e)),id:uid(),kind:ctx.tab.slice(0,-1),reference:e.reference||v085DiceSummary(e),cooldownRemaining:0,currentUses:e.maxUses??""};
   target.playerActions=target.playerActions||[];target.playerActions.push(a);
  }else{
-  target.actions=target.actions||[];target.actions.push({id:uid(),name:e.name,reference:e.description||"",attackMod:"",damageDice:"",rollDice:""});
+  target.actions=target.actions||[];target.actions.push({...JSON.parse(JSON.stringify(e)),id:uid(),reference:e.reference||v085DiceSummary(e),attackMod:e.attackModifier??0,rollDice:e.hitDice||""});
  }
  saveAll();render();v083Target=null;v083Back("v083TargetDialog");toast(`${e.name} ${ctx.tab==="Effects"?"applied":"assigned"} to ${target.name}`);
 }
@@ -424,7 +437,7 @@ function v081BankRender(){
   const row=document.createElement("div");row.className="library-entry";
   const label=document.createElement("div"),nm=document.createElement("strong"),desc=document.createElement("div");
   nm.textContent=entry.name||"Unnamed";desc.className="hint";
-  desc.textContent=tab==="Mobs"?`${entry.type||"Mob"} · ${entry.mobHPMax||10} HP`:(entry.description||entry.reference||entry.mode||"");
+  desc.textContent=tab==="Mobs"?`${entry.type||"Mob"} · ${entry.mobHPMax||10} HP`:[v085DiceSummary(entry),entry.description||entry.reference||entry.mode||""].filter(Boolean).join(" · ");
   label.append(nm,desc);const controls=document.createElement("div");controls.className="controls";
   if(tab==="Mobs"){
    controls.append(button("DEPLOY","primary",()=>{
@@ -491,7 +504,7 @@ function publicSnapshot(){
    id:t.id,name:t.name,color:t.color||"#43d17a",
    remaining:effective(t,now),running:!!t.running,rate:timeRate(t),turnState:t.turnState||"active",
    cooldowns:(t.playerActions||[]).filter(a=>Number(a.cooldown)>0).map(a=>({name:a.name,remaining:Number(a.cooldownRemaining)||0})),
-   actions:(t.playerActions||[]).map(a=>({id:a.id,kind:a.kind,name:a.name,reference:a.reference,description:a.description,timeCost:Number(a.timeCost)||0,cooldown:Number(a.cooldown)||0,cooldownRemaining:Number(a.cooldownRemaining)||0,maxUses:a.maxUses,currentUses:a.currentUses})),
+   actions:(t.playerActions||[]).map(a=>({id:a.id,kind:a.kind,name:a.name,reference:a.reference,description:a.description,hitDice:a.hitDice||a.rollDice||"",attackModifier:Number(a.attackModifier??a.attackMod)||0,damageDice:a.damageDice||"",damageModifier:Number(a.damageModifier)||0,saveAbility:a.saveAbility||"",saveDC:a.saveDC??"",duration:Number(a.duration)||0,timeCost:Number(a.timeCost)||0,cooldown:Number(a.cooldown)||0,cooldownRemaining:Number(a.cooldownRemaining)||0,maxUses:a.maxUses,currentUses:a.currentUses})),
    effects:(t.effects||[]).map(x=>({name:x.name,mode:x.mode,amount:Number(x.amount)||0,remainingDuration:Number(x.remainingDuration??x.duration)||0}))
   })),
   entities:entities.filter(e=>e.visible!==false).map(e=>({
@@ -648,7 +661,7 @@ function playerActionView(t,a){
  if(limited){const badge=document.createElement("span");badge.className="uses-badge";badge.textContent=`${remaining}/${a.maxUses}`;n.append(badge)}
  const cdMax=Math.max(0,Number(a.cooldown)||0),cd=Math.max(0,Number(a.cooldownRemaining)||0);if(cdMax){const badge=document.createElement("span");badge.className="cooldown "+(cd<=0?"ready":"wait");badge.dataset.cooldownId=a.id;badge.textContent=cd<=0?"READY":`CD ${format(cd)}`;n.append(badge)}
  if(a.description){const ib=button("ⓘ","info-btn",()=>x.classList.toggle("tooltip-open"));ib.title="Show description";n.append(ib);const tip=document.createElement("div");tip.className="action-tooltip";tip.textContent=a.description;x.append(n,tip)}else{x.append(n)}
- if(a.reference){const r=document.createElement("div");r.className="player-action-ref";r.textContent=a.reference;x.append(r)}
+ if(a.reference||v085DiceSummary(a)){const r=document.createElement("div");r.className="player-action-ref";r.textContent=[v085DiceSummary(a),a.reference].filter(Boolean).filter((v,i,arr)=>arr.indexOf(v)===i).join(" · ");x.append(r)}
  const footer=document.createElement("div");footer.className="action-footer";const cost=Number(a.timeCost)||0;footer.append(button(cost?`USE −${cost}s`:"USE","",()=>usePlayerAction(t,a)));
  if(limited)footer.append(button("RESET","",()=>resetPlayerActionUses(t,a)));
  x.append(footer);return x
@@ -659,8 +672,8 @@ let editingPlayerId=null, editingStatsPlayerId=null;
 function addPlayerActionRow(a={id:uid(),kind:"Action",name:"Action",reference:"",description:"",timeCost:0,maxUses:"",currentUses:""}){
  const h=document.getElementById("playerActionBuilder"),r=document.createElement("div");r.className="builder-row action-row";r.dataset.id=a.id||uid();
  const migratedMax=(a.maxUses!==undefined?a.maxUses:(a.uses??""));const migratedCurrent=(a.currentUses!==undefined?a.currentUses:migratedMax);
- r.innerHTML='<div><label>Type</label><select class="ppa-kind"><option>Action</option><option>Attack</option><option>Spell</option><option>Item</option><option>Ability</option></select></div><div><label>Name</label><input class="ppa-name"></div><div><label>Reference / dice</label><input class="ppa-ref" placeholder="DEX 15 · 8d6 Fire"></div><div><label>Time cost (sec)</label><input class="ppa-time" type="number" min="0"></div><div><label>Cooldown (player sec)</label><input class="ppa-cooldown" type="number" min="0"></div><div><label>Current uses</label><input class="ppa-current" type="number" min="0"></div><div><label>Maximum uses (blank = ∞)</label><input class="ppa-max" type="number" min="0"></div><div style="grid-column:1/-1"><label>Description / rules tooltip</label><textarea class="ppa-desc" placeholder="Range, targeting, special rules, effects, reminders..."></textarea></div>';
- r.querySelector(".ppa-kind").value=a.kind||"Action";r.querySelector(".ppa-name").value=a.name||"";r.querySelector(".ppa-ref").value=a.reference||"";r.querySelector(".ppa-time").value=a.timeCost||0;r.querySelector(".ppa-cooldown").value=a.cooldown||0;r.querySelector(".ppa-current").value=migratedCurrent;r.querySelector(".ppa-max").value=migratedMax;r.querySelector(".ppa-desc").value=a.description||"";r.append(button("REMOVE","danger",()=>r.remove()));h.append(r)
+ r.innerHTML='<div><label>Type</label><select class="ppa-kind"><option>Action</option><option>Attack</option><option>Spell</option><option>Item</option><option>Ability</option></select></div><div><label>Name</label><input class="ppa-name"></div><div><label>Reference / dice</label><input class="ppa-ref" placeholder="DEX 15 · 8d6 Fire"></div><div><label>Hit dice</label><input class="ppa-hit" placeholder="1d20"></div><div><label>Hit modifier</label><input class="ppa-hitmod" type="number"></div><div><label>Damage dice</label><input class="ppa-damage" placeholder="3d8"></div><div><label>Damage modifier</label><input class="ppa-damagemod" type="number"></div><div><label>Save ability</label><input class="ppa-save" placeholder="DEX"></div><div><label>Save DC</label><input class="ppa-dc" type="number"></div><div><label>Duration (sec)</label><input class="ppa-duration" type="number" min="0"></div><div><label>Time cost (sec)</label><input class="ppa-time" type="number" min="0"></div><div><label>Cooldown (player sec)</label><input class="ppa-cooldown" type="number" min="0"></div><div><label>Current uses</label><input class="ppa-current" type="number" min="0"></div><div><label>Maximum uses (blank = ∞)</label><input class="ppa-max" type="number" min="0"></div><div style="grid-column:1/-1"><label>Description / rules tooltip</label><textarea class="ppa-desc" placeholder="Range, targeting, special rules, effects, reminders..."></textarea></div>';
+ r.querySelector(".ppa-kind").value=a.kind||"Action";r.querySelector(".ppa-name").value=a.name||"";r.querySelector(".ppa-ref").value=a.reference||"";r.querySelector(".ppa-hit").value=a.hitDice||a.rollDice||"";r.querySelector(".ppa-hitmod").value=a.attackModifier??a.attackMod??0;r.querySelector(".ppa-damage").value=a.damageDice||"";r.querySelector(".ppa-damagemod").value=a.damageModifier??0;r.querySelector(".ppa-save").value=a.saveAbility||"";r.querySelector(".ppa-dc").value=a.saveDC??"";r.querySelector(".ppa-duration").value=a.duration??0;r.querySelector(".ppa-time").value=a.timeCost||0;r.querySelector(".ppa-cooldown").value=a.cooldown||0;r.querySelector(".ppa-current").value=migratedCurrent;r.querySelector(".ppa-max").value=migratedMax;r.querySelector(".ppa-desc").value=a.description||"";r.append(button("REMOVE","danger",()=>r.remove()));h.append(r)
 }
 function openPlayerActions(t){editingPlayerId=t.id;document.getElementById("playerActionTitle").textContent=`Actions — ${t.name}`;document.getElementById("playerActionBuilder").innerHTML="";(t.playerActions||[]).forEach(addPlayerActionRow);document.getElementById("playerActionDialog").showModal()}
 
@@ -901,10 +914,10 @@ document.getElementById("entityEffectsForm").addEventListener("submit",ev=>{if(e
 document.getElementById("addRateEffect").onclick=()=>addEffectRow({id:uid(),name:"Active Rate",mode:"rate",amount:.10,condition:"active",interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
 document.getElementById("addPulseEffect").onclick=()=>addEffectRow({id:uid(),name:"Burning",mode:"pulse",amount:-5,condition:"always",interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
 document.getElementById("effectsForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingEffectsPlayerId);if(t){const was=t.running;if(was)freeze(t);const oldEffects=t.effects||[];t.effects=oldEffects.filter(x=>!["rate","pulse"].includes(x.mode));document.querySelectorAll("#effectsBuilder .effect-row").forEach(r=>{const duration=Math.max(0,Number(r.querySelector(".fx-duration").value)||0),prev=(t.effects||[]).find(x=>x.id===r.dataset.id);t.effects.push({id:r.dataset.id,name:r.querySelector(".fx-name").value.trim()||"Effect",mode:r.dataset.mode,amount:Number(r.querySelector(".fx-amount").value)||0,condition:r.querySelector(".fx-condition")?.value||"always",interval:Math.max(1,Number(r.querySelector(".fx-interval").value)||10),duration,remainingDuration:prev&&Number(prev.duration)===duration?Number(prev.remainingDuration??duration):duration,pulseElapsed:Number(prev?.pulseElapsed)||0})});if(was&&t.remaining>0){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining}logEvent(`${t.name}: timed effects updated`);saveAll();render()}document.getElementById("effectsDialog").close()});
-function savePlayerActions331(){const t=timers.find(x=>x.id===editingPlayerId);if(!t)return;t.playerActions=[];document.querySelectorAll("#playerActionBuilder .action-row").forEach(r=>{const maxRaw=r.querySelector(".ppa-max").value,currentRaw=r.querySelector(".ppa-current").value,maxUses=maxRaw===""?"":Math.max(0,Number(maxRaw)||0),currentUses=maxUses===""?"":Math.min(maxUses,Math.max(0,currentRaw===""?maxUses:(Number(currentRaw)||0)));t.playerActions.push({id:r.dataset.id,kind:r.querySelector(".ppa-kind").value,name:r.querySelector(".ppa-name").value.trim()||"Action",reference:r.querySelector(".ppa-ref").value.trim(),description:r.querySelector(".ppa-desc").value.trim(),timeCost:Math.max(0,Number(r.querySelector(".ppa-time").value)||0),cooldown:Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),cooldownRemaining:Math.min(Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),Math.max(0,Number((t.playerActions||[]).find(a=>a.id===r.dataset.id)?.cooldownRemaining)||0)),maxUses,currentUses})});logEvent(`${t.name}: actions updated`);saveAll();render();document.getElementById("playerActionDialog").close()}
+function savePlayerActions331(){const t=timers.find(x=>x.id===editingPlayerId);if(!t)return;t.playerActions=[];document.querySelectorAll("#playerActionBuilder .action-row").forEach(r=>{const maxRaw=r.querySelector(".ppa-max").value,currentRaw=r.querySelector(".ppa-current").value,maxUses=maxRaw===""?"":Math.max(0,Number(maxRaw)||0),currentUses=maxUses===""?"":Math.min(maxUses,Math.max(0,currentRaw===""?maxUses:(Number(currentRaw)||0)));t.playerActions.push({id:r.dataset.id,kind:r.querySelector(".ppa-kind").value,name:r.querySelector(".ppa-name").value.trim()||"Action",reference:r.querySelector(".ppa-ref").value.trim(),hitDice:r.querySelector(".ppa-hit").value.trim(),rollDice:r.querySelector(".ppa-hit").value.trim(),attackModifier:Number(r.querySelector(".ppa-hitmod").value)||0,damageDice:r.querySelector(".ppa-damage").value.trim(),damageModifier:Number(r.querySelector(".ppa-damagemod").value)||0,saveAbility:r.querySelector(".ppa-save").value.trim().toUpperCase(),saveDC:r.querySelector(".ppa-dc").value===""?"":Number(r.querySelector(".ppa-dc").value)||0,duration:Number(r.querySelector(".ppa-duration").value)||0,description:r.querySelector(".ppa-desc").value.trim(),timeCost:Math.max(0,Number(r.querySelector(".ppa-time").value)||0),cooldown:Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),cooldownRemaining:Math.min(Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),Math.max(0,Number((t.playerActions||[]).find(a=>a.id===r.dataset.id)?.cooldownRemaining)||0)),maxUses,currentUses})});logEvent(`${t.name}: actions updated`);saveAll();render();document.getElementById("playerActionDialog").close()}
 document.getElementById("savePlayerActions331").onclick=savePlayerActions331;
 document.getElementById("addPlayerActionRow").onclick=()=>addPlayerActionRow();
-document.getElementById("playerActionForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingPlayerId);if(t){t.playerActions=[];document.querySelectorAll("#playerActionBuilder .builder-row").forEach(r=>(()=>{const maxRaw=r.querySelector(".ppa-max").value,currentRaw=r.querySelector(".ppa-current").value,maxUses=maxRaw===""?"":Math.max(0,Number(maxRaw)||0),currentUses=maxUses===""?"":Math.min(maxUses,Math.max(0,currentRaw===""?maxUses:(Number(currentRaw)||0)));return{id:r.dataset.id,kind:r.querySelector(".ppa-kind").value,name:r.querySelector(".ppa-name").value.trim()||"Action",reference:r.querySelector(".ppa-ref").value.trim(),description:r.querySelector(".ppa-desc").value.trim(),timeCost:Math.max(0,Number(r.querySelector(".ppa-time").value)||0),cooldown:Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),cooldownRemaining:Math.min(Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),Math.max(0,Number((t.playerActions||[]).find(a=>a.id===r.dataset.id)?.cooldownRemaining)||0)),maxUses,currentUses}})());logEvent(`${t.name}: player actions updated`);saveAll();render()}document.getElementById("playerActionDialog").close()});
+document.getElementById("playerActionForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingPlayerId);if(t){t.playerActions=[];document.querySelectorAll("#playerActionBuilder .builder-row").forEach(r=>(()=>{const maxRaw=r.querySelector(".ppa-max").value,currentRaw=r.querySelector(".ppa-current").value,maxUses=maxRaw===""?"":Math.max(0,Number(maxRaw)||0),currentUses=maxUses===""?"":Math.min(maxUses,Math.max(0,currentRaw===""?maxUses:(Number(currentRaw)||0)));return{id:r.dataset.id,kind:r.querySelector(".ppa-kind").value,name:r.querySelector(".ppa-name").value.trim()||"Action",reference:r.querySelector(".ppa-ref").value.trim(),hitDice:r.querySelector(".ppa-hit").value.trim(),rollDice:r.querySelector(".ppa-hit").value.trim(),attackModifier:Number(r.querySelector(".ppa-hitmod").value)||0,damageDice:r.querySelector(".ppa-damage").value.trim(),damageModifier:Number(r.querySelector(".ppa-damagemod").value)||0,saveAbility:r.querySelector(".ppa-save").value.trim().toUpperCase(),saveDC:r.querySelector(".ppa-dc").value===""?"":Number(r.querySelector(".ppa-dc").value)||0,duration:Number(r.querySelector(".ppa-duration").value)||0,description:r.querySelector(".ppa-desc").value.trim(),timeCost:Math.max(0,Number(r.querySelector(".ppa-time").value)||0),cooldown:Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),cooldownRemaining:Math.min(Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),Math.max(0,Number((t.playerActions||[]).find(a=>a.id===r.dataset.id)?.cooldownRemaining)||0)),maxUses,currentUses}})());logEvent(`${t.name}: player actions updated`);saveAll();render()}document.getElementById("playerActionDialog").close()});
 
 let lastLogicMs=Date.now();
 
