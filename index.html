@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BattleClock v0.9.0</title>
+<title>BattleClock v0.9.1</title>
 <style>
 :root{--bg:#15171a;--panel:#24282d;--panel2:#1c1f23;--text:#f3f4f6;--muted:#aeb4bd;--border:#444b55;--run:#43d17a;--danger:#ff5c5c}
 *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
@@ -140,7 +140,7 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 </head>
 <body>
 <header>
-<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.9.0</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
+<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.9.1</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
 <div class="header-buttons">
 <span id="partyStatus" class="party-status" style="display:none">PARTY VIEW OFFLINE</span>
 <button id="partyConnect">CONNECT PARTY VIEW</button>
@@ -163,7 +163,7 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 <div id="emptyTimeline" class="empty" style="display:none">No encounter events. Add one for initiative, hazards, reinforcements, or anything else that should happen on a clock.</div>
 </section>
 <div class="custom-title"><h2>Session Entities</h2><span class="sub">Build NPCs, objectives, hazards, machines, effects, or other session mechanics from reusable components.</span></div>
-<div id="hiddenEntities" class="hidden-panel" style="display:none"><strong>HIDDEN / STAGED ENTITIES</strong><div class="sub">Prepared entities hidden from the active session area.</div><div id="hiddenEntityList" class="hidden-list"></div></div><div id="emptyEntities" class="empty">No session entities yet. Use + ADD ENTITY to build one.</div>
+<div id="hiddenEntities" class="hidden-panel" style="display:none"><strong>HIDDEN / STAGED ENTITIES</strong><div class="sub">Prepared entities hidden from the active session area.</div><div id="hiddenEntityList" class="hidden-list"></div></div>
 <div class="footer-note">BattleClock stores the DM game locally in this browser. When Party View is connected, player clocks/effects, visible entity components, and public encounter events are published. Player dice and arithmetic remain manual.</div>
 </main>
 <div id="toast" class="toast"></div>
@@ -860,7 +860,7 @@ document.getElementById("eventsToggle").onclick=()=>setEventsRunning(!eventsRunn
 document.getElementById("pauseAll").onclick=()=>{const run=!(playersRunning&&eventsRunning);setPlayersRunning(run);setEventsRunning(run);updateGroupButtons()};
 document.getElementById("addTimelineEvent").onclick=()=>openTimeline();
 document.getElementById("timelineForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const interval=Math.max(1,(Number(document.getElementById("timelineMinutes").value)||0)*60+(Number(document.getElementById("timelineSeconds").value)||0));let x=timeline.find(y=>y.id===editingTimelineId);if(!x){x={id:uid(),remaining:interval,running:false,startedAt:null,startRemaining:null};timeline.push(x)}else if(x.running)freezeTimeline(x);x.name=document.getElementById("timelineName").value.trim()||"Event";x.interval=interval;x.repeat=document.getElementById("timelineRepeat").checked;x.public=document.getElementById("timelinePublic").checked;x.entityId=document.getElementById("timelineEntity").value;x.remaining=Math.min(x.remaining||interval,interval);saveAll();renderTimeline();document.getElementById("timelineDialog").close()});
-document.getElementById("clearEvents").onclick=()=>{if(confirm("Clear event history?")){events=[];saveEvents();renderEvents()}};
+// Event history removed in v0.9.0; no clearEvents control to bind.
 document.getElementById("exportSave").onclick=exportSave;document.getElementById("importSave").onclick=()=>document.getElementById("importSaveFile").click();document.getElementById("importSaveFile").onchange=e=>{if(e.target.files[0])importSaveFile(e.target.files[0]);e.target.value=""};
 document.getElementById("gameSettings").onclick=()=>{document.getElementById("defaultMinutes").value=Math.floor(game.defaultSeconds/60);document.getElementById("defaultSeconds").value=game.defaultSeconds%60;document.getElementById("gameSettingsDialog").showModal()};
 document.getElementById("gameSettingsForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();game.defaultSeconds=Math.max(0,(Number(document.getElementById("defaultMinutes").value)||0)*60+(Number(document.getElementById("defaultSeconds").value)||0));saveGame();if(document.getElementById("applyDefaultPrimary").checked){timers.forEach(t=>{t.remaining=game.defaultSeconds;t.running=false;t.startedAt=null;t.startRemaining=null});document.getElementById("applyDefaultPrimary").checked=false}saveAll();render();document.getElementById("gameSettingsDialog").close();toast(`Default player timer set to ${format(game.defaultSeconds)}.`)});
