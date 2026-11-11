@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BattleClock v0.9.1</title>
+<title>BattleClock v0.9.2</title>
 <style>
 :root{--bg:#15171a;--panel:#24282d;--panel2:#1c1f23;--text:#f3f4f6;--muted:#aeb4bd;--border:#444b55;--run:#43d17a;--danger:#ff5c5c}
 *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
@@ -136,11 +136,22 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 
 /* v0.9.0: compact two-column encounter dashboard and shared drag initiative */
 #bc09Dashboard{margin:8px 0}.bc09-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}.bc09-side{min-width:0}.bc09-side>h2{font-size:15px;margin:6px 0 10px}.bc09-side #players,.bc09-side #entities{display:flex;flex-direction:column;gap:6px;min-width:0}.bc09-shell{border:1px solid #354756;border-radius:9px;min-width:0;overflow:hidden}.bc09-shell.active{border:2px solid #5acb90}.bc09-shell .bc09-summary{display:flex;gap:8px;align-items:center;padding:8px;background:#1c2731;cursor:pointer;font-size:13px}.bc09-summary strong{flex:1}.bc09-shell .bc09-details{display:none;padding:5px}.bc09-shell.open .bc09-details{display:block}.bc09-details article{margin:0!important;width:100%!important;max-width:none!important;min-width:0!important;box-sizing:border-box}.bc09-details .timer,.bc09-details .entity-card{padding:8px!important}.bc09-details button{font-size:10px!important;padding:4px 6px!important}.bc09-details .controls{gap:3px!important;flex-wrap:wrap}.bc09-details .mob-hp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.bc09-details .mob-hp-row{min-width:0}.bc09-details .entity-tools{gap:3px;flex-wrap:wrap}.bc09-details .status{font-size:10px}.bc09-details .name{font-size:15px}.bc09-details .clock{font-size:26px!important}.bc09-details .ability-strip{flex-wrap:wrap}#bc09Initiative{background:#151f29;border:1px solid #354756;border-radius:10px;padding:10px;margin:10px 0}.bc09-init-list{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0}.bc09-init-entry{padding:8px;border:1px solid #3a4b5b;background:#202b36;border-radius:7px;cursor:grab;user-select:none;font-size:12px}.bc09-init-entry.active{border-color:#59d49c;background:#214536}.bc09-init-entry.dragover{outline:2px dashed #9ecaff}.bc09-lap{font-variant-numeric:tabular-nums;font-size:24px;font-weight:700}.bc09-init-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.bc09-init-tools button{padding:7px 10px}.bc09-bank-compact .controls button,.library-entry .controls button{font-size:10px!important;padding:3px 6px!important}.library-entry{padding:5px!important;gap:4px!important}.library-entry .controls{gap:3px!important}.event-panel,#v08Initiative,#v08Players,.timeline-panel{display:none!important}@media(max-width:800px){.bc09-columns{grid-template-columns:1fr}}
+
+/* v0.9.2 editor and category cues */
+#bc092Editor{width:min(900px,96vw);max-height:90vh;overflow:auto;background:#131c25;color:#eef2f5;border:1px solid #496072;border-radius:12px;padding:18px}
+#bc092Editor::backdrop{background:#000b}
+.bc092-tabs{display:flex;gap:5px;flex-wrap:wrap;margin:12px 0}.bc092-tabs button{padding:8px 11px;font-size:12px}.bc092-tabs button.active{background:#28684f;border-color:#61c79a;color:white}
+.bc092-pane{display:none}.bc092-pane.active{display:block}.bc092-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.bc092-fields label{display:block;margin-bottom:4px}.bc092-fields input,.bc092-fields textarea{width:100%;box-sizing:border-box}
+.bc092-action{border:1px solid #3a4b5b;border-left:5px solid #9aabb9;border-radius:8px;padding:9px;margin:7px 0;background:#18242e}.bc092-action.item{border-left-color:#5da9ed}.bc092-action.spell{border-left-color:#b68af2}.bc092-action.ability{border-left-color:#5bd39c}.bc092-action.attack{border-left-color:#e6ae6b}.bc092-action .action-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.bc092-action .action-head strong{flex:1}.bc092-action .action-head button{padding:5px 9px}
+.bc092-bankline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px;border-bottom:1px solid #34424e}.bc092-bankline span{flex:1}.bc092-muted{font-size:12px;color:#aebac7}.bc092-category{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.player-action.bc092-item{border-left:4px solid #5da9ed;background:#182a39}.player-action.bc092-spell{border-left:4px solid #b68af2;background:#271e36}.player-action.bc092-ability{border-left:4px solid #5bd39c;background:#193127}.player-action.bc092-attack{border-left:4px solid #e6ae6b;background:#30271e}.player-action.bc092-action{border-left:4px solid #aebac7}
+.bc092-editor-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+@media(max-width:650px){.bc092-fields{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <header>
-<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.9.1</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
+<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.9.2</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
 <div class="header-buttons">
 <span id="partyStatus" class="party-status" style="display:none">PARTY VIEW OFFLINE</span>
 <button id="partyConnect">CONNECT PARTY VIEW</button>
@@ -191,6 +202,8 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 
 
 
+
+<dialog id="bc092Editor"><h2 id="bc092Heading">Edit Player</h2><div class="bc092-tabs" id="bc092Tabs"></div><div id="bc092Pane" class="bc092-pane active"></div><div class="bc092-editor-footer"><button type="button" id="bc092Close">CLOSE</button><button type="button" class="primary" id="bc092Save">SAVE PLAYER</button></div></dialog>
 <dialog id="playerStatsDialog" class="builder"><form method="dialog" id="playerStatsForm">
 <h3 id="playerStatsTitle">Player Stats</h3>
 <div class="builder-grid">
@@ -279,7 +292,70 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 <div class="dialog-buttons"><button value="cancel">Cancel</button><button type="submit" class="primary">CONNECT</button></div>
 </form>
 </dialog>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+// v0.9.2: a single, tabbed editor; existing combat/time functions are unchanged.
+function bc092Kind(kind){const k=String(kind||"Action").toLowerCase();return ["item","spell","ability","attack"].includes(k)?k:"action"}
+function bc092Icon(k){return ({item:"🗡️",spell:"✨",ability:"⚡",attack:"🎯",action:"⚙️"})[k]||"⚙️"}
+let bc092Editing=null,bc092Tab="General",bc092Draft=null;
+const bc092Tabs=["General","Stats","Items","Spells","Abilities","Effects","Notes"];
+function bc092Open(t,tab="General"){
+ bc092Editing=t.id;bc092Tab=tab;bc092Draft={name:t.name,color:t.color||"#43d17a",icon:t.icon||"⚔️",notes:t.notes||"",stats:JSON.parse(JSON.stringify(t.stats||{}))};
+ document.getElementById("bc092Heading").textContent=`Edit Player — ${t.name}`;
+ bc092Render();document.getElementById("bc092Editor").showModal();
+}
+function bc092CommitDraft(){
+ const p=document.getElementById("bc092Pane");if(!p||!bc092Draft)return;
+ const val=(id)=>p.querySelector(`[data-field="${id}"]`)?.value;
+ if(bc092Tab==="General"){
+  if(val("name")!==undefined)bc092Draft.name=val("name");if(val("icon")!==undefined)bc092Draft.icon=val("icon");if(val("color")!==undefined)bc092Draft.color=val("color");
+ }else if(bc092Tab==="Stats"){
+  ["STR","DEX","CON","INT","WIS","CHA","AC"].forEach(k=>{if(val(k)!==undefined)bc092Draft.stats[k]=Number(val(k))||0});
+  ["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>{if(val("bonus"+k)!==undefined)bc092Draft.stats["bonus"+k]=Number(val("bonus"+k))||0});
+ }else if(bc092Tab==="Notes"){if(val("notes")!==undefined)bc092Draft.notes=val("notes")}
+}
+function bc092Save(){
+ bc092CommitDraft();const t=timers.find(x=>x.id===bc092Editing);if(!t)return;
+ const name=bc092Draft.name.trim();if(!name){toast("Player name cannot be empty");return}
+ t.name=name;t.color=bc092Draft.color;t.icon=bc092Draft.icon;t.notes=bc092Draft.notes;t.stats=bc092Draft.stats;
+ saveAll();render();document.getElementById("bc092Editor").close();toast(`${name} saved`);
+}
+function bc092El(tag,attrs={},txt){const el=document.createElement(tag);Object.entries(attrs).forEach(([k,v])=>{if(k==="className")el.className=v;else el.setAttribute(k,v)});if(txt!==undefined)el.textContent=txt;return el}
+function bc092Field(parent,label,value,field,type="text"){
+ const d=bc092El("div"),l=bc092El("label",{},label),i=bc092El("input",{"data-field":field,type});i.value=value??"";d.append(l,i);parent.append(d);return i;
+}
+function bc092Render(){
+ const t=timers.find(x=>x.id===bc092Editing);if(!t)return;
+ const tabs=document.getElementById("bc092Tabs"),p=document.getElementById("bc092Pane");tabs.replaceChildren();p.replaceChildren();
+ bc092Tabs.forEach(tab=>{const b=button(tab,tab===bc092Tab?"active":"",()=>{bc092CommitDraft();bc092Tab=tab;bc092Render()});tabs.append(b)});
+ if(bc092Tab==="General"){
+  const g=bc092El("div",{className:"bc092-fields"});p.append(g);bc092Field(g,"Player name",bc092Draft.name,"name");bc092Field(g,"Icon / emoji",bc092Draft.icon,"icon");bc092Field(g,"Tile colour",bc092Draft.color,"color","color");
+  p.append(bc092El("p",{className:"bc092-muted"},"The live resource clock and its start/stop controls remain on the player tile. Editing a profile never resets its clock."));
+ }else if(bc092Tab==="Stats"){
+  const g=bc092El("div",{className:"bc092-fields"});p.append(g);["STR","DEX","CON","INT","WIS","CHA","AC"].forEach(k=>bc092Field(g,k,bc092Draft.stats[k]??10,k,"number"));
+  ["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>bc092Field(g,k+" custom bonus",bc092Draft.stats["bonus"+k]??0,"bonus"+k,"number"));
+ }else if(["Items","Spells","Abilities"].includes(bc092Tab)){
+  const kind=bc092Tab.slice(0,-1).toLowerCase(),icon=bc092Icon(kind);
+  p.append(bc092El("p",{className:"bc092-muted"},`${icon} Assigned ${bc092Tab.toLowerCase()} are immediately available on the expanded player tile. Player dice are always rolled manually.`));
+  const own=bc092El("div");p.append(own);
+  const draw=()=>{own.replaceChildren();const actions=(t.playerActions||[]).filter(a=>bc092Kind(a.kind)===kind);if(!actions.length)own.append(bc092El("p",{className:"bc092-muted"},"Nothing assigned yet."));
+   actions.forEach(a=>{const d=bc092El("div",{className:"bc092-action "+kind}),h=bc092El("div",{className:"action-head"});h.append(bc092El("strong",{},`${icon} ${a.name}`));h.append(button("EDIT","",()=>{bc092Save();openPlayerActions(t)}));h.append(button("REMOVE","danger",()=>{if(!confirm(`Remove ${a.name} from ${t.name}?`))return;t.playerActions=t.playerActions.filter(x=>x.id!==a.id);saveAll();render();draw()}));d.append(h);d.append(bc092El("div",{className:"bc092-muted"},[v085DiceSummary(a),a.description].filter(Boolean).join(" · ")));own.append(d)})};draw();
+  p.append(bc092El("h4",{},`Add from ${bc092Tab} Bank`));const bank=v081Banks[bc092Tab]||[];
+  if(!bank.length)p.append(bc092El("p",{className:"bc092-muted"},"Bank empty. Create a template in the existing Banks window."));
+  bank.forEach(entry=>{const row=bc092El("div",{className:"bc092-bankline"});row.append(bc092El("span",{},`${icon} ${entry.name||"Untitled"}`));row.append(button("+ ASSIGN","primary",()=>{const copy=JSON.parse(JSON.stringify(entry));copy.id=uid();copy.kind=bc092Tab.slice(0,-1);copy.cooldownRemaining=0;copy.currentUses=copy.maxUses??"";t.playerActions=t.playerActions||[];t.playerActions.push(copy);saveAll();render();draw();toast(`${entry.name} assigned`)}));p.append(row)});
+  p.append(button("OPEN BANKS","",()=>{bc092Save();document.getElementById("v081LibraryDialog").showModal();v081BankTab=bc092Tab;v081BankRender()}));
+  p.append(button("ADVANCED ACTION EDITOR","",()=>{bc092Save();openPlayerActions(t)}));
+ }else if(bc092Tab==="Effects"){
+  p.append(bc092El("p",{className:"bc092-muted"},"Timed rate/pulse effects are managed by the existing effects editor."));
+  (t.effects||[]).forEach(e=>p.append(bc092El("div",{className:"bc092-action"},`${e.name} · ${e.kind||e.mode||"effect"}`)));
+  p.append(button("EDIT TIMED EFFECTS","",()=>{bc092Save();openEffects(t)}));
+ }else if(bc092Tab==="Notes"){
+  const area=bc092El("textarea",{"data-field":"notes",rows:"10",style:"width:100%;box-sizing:border-box",placeholder:"Character background, rules, tactical reminders..."});area.value=bc092Draft.notes;p.append(area);
+ }
+}
+document.getElementById("bc092Close").onclick=()=>document.getElementById("bc092Editor").close();
+document.getElementById("bc092Save").onclick=bc092Save;
+
+</script>
 <dialog id="v081LibraryDialog" class="builder"><h3>BattleClock Library</h3><div id="v081LibraryTabs" class="library-tabs"></div><div id="v081LibraryList"></div><div class="dialog-buttons"><button id="v081NewEntry" class="primary">+ NEW</button><button onclick="document.getElementById('v081LibraryDialog').close()">CLOSE</button></div></dialog>
 
 <dialog id="v083EditorDialog" class="builder"><form id="v083EditorForm"><h3 id="v083EditorTitle">Library template</h3><div id="v083EditorFields"></div><div class="dialog-buttons"><button type="button" id="v083EditorCancel">CANCEL</button><button type="submit" class="primary">SAVE</button></div></form></dialog>
@@ -581,7 +657,7 @@ function timerCard(t){
  const stats=Object.assign({STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},t.stats||{});
  ["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>{const z=document.createElement("div");z.className="ability";const base=Number(stats[k])||0,mod=Math.floor((base-10)/2),bonus=Number(stats["bonus"+k])||0;z.innerHTML=`<b>${k}</b><span><span class="stat-base">${base}</span><span class="stat-mod">${mod>=0?"+":""}${mod}</span>${bonus?`<span class="stat-temp">${bonus>0?"+":""}${bonus}</span>`:""}</span>`;statWrap.append(z)});
  const ac=document.createElement("div");ac.className="ability";ac.innerHTML=`<b>AC</b><span>🛡 ${stats.AC}</span>`;statWrap.append(ac);
- const statEdit=button("EDIT STATS","stats-edit",()=>openPlayerStats(t));
+ const statEdit=button("EDIT PLAYER","stats-edit",()=>bc092Open(t));
  const turn=document.createElement("div");turn.className="turn-banner "+(t.turnState==="passive"?"passive":"active");turn.textContent=`${Math.round(timeRate(t)*100)}%`;turn.title=t.turnState==="passive"?"PASSIVE / NOT MY TURN":"ACTIVE / MY TURN";
  const clock=document.createElement("div");clock.className="clock";clock.textContent=format(sec);clock.title="Click to start or stop";clock.onclick=()=>toggle(t);
  const controls=document.createElement("div");controls.className="controls";
@@ -590,7 +666,7 @@ function timerCard(t){
  [5,10,30].forEach(x=>controls.append(button(`+${x}`,"adjust",()=>adjust(t,x))));
  const effectsLine=document.createElement("div");effectsLine.className="effects-line";const rate=timeRate(t);if(rate!==1){const b=document.createElement("span");b.className="effect-badge";b.textContent=`⏱ ${rate.toFixed(2)}×`;effectsLine.append(b)}(t.effects||[]).forEach(x=>{const b=document.createElement("span");b.className="effect-badge";b.textContent=`${x.name}${x.duration>0?` ${format(x.remainingDuration??x.duration)}`:""}`;effectsLine.append(b)});
  const secondary=document.createElement("div");secondary.className="secondary";secondary.append(button("SET TIME","",()=>openSetTime(t)),button("EFFECTS","",()=>openEffects(t)));
- const pa=document.createElement("div");pa.className="player-actions";const ph=document.createElement("div");ph.className="player-actions-head";ph.innerHTML="<strong>ACTIONS / SPELLS / ITEMS</strong>";ph.append(button("EDIT","",()=>openPlayerActions(t)));pa.append(ph);if((t.playerActions||[]).length){const pl=document.createElement("div");pl.className="player-action-list";t.playerActions.forEach(a=>pl.append(playerActionView(t,a)));pa.append(pl)}card.append(head,statWrap,statEdit,turn,clock,effectsLine,controls,secondary,pa);return card
+ const pa=document.createElement("div");pa.className="player-actions";const ph=document.createElement("div");ph.className="player-actions-head";ph.innerHTML="<strong>ACTIONS / SPELLS / ITEMS</strong>";ph.append(button("EDIT PLAYER","",()=>bc092Open(t,"Items")));pa.append(ph);if((t.playerActions||[]).length){const pl=document.createElement("div");pl.className="player-action-list";t.playerActions.forEach(a=>pl.append(playerActionView(t,a)));pa.append(pl)}card.append(head,statWrap,statEdit,turn,clock,effectsLine,controls,secondary,pa);return card
 }
 
 function compEffective(c,now=Date.now()){if(c.kind!=="timer"||!c.running)return Math.max(0,Number(c.value)||0);return Math.max(0,(Number(c.startValue)||0)-Math.floor((now-c.startedAt)/1000))}
@@ -656,16 +732,16 @@ function showRoll(label,r){const mod=r.m?`${r.m>0?"+":""}${r.m}`:"";const msg=`$
 function rollForEntity(e,a,expr){const p=parseDice(expr);if(p)showRoll(`${e.name} — ${a.name}`,rollDice(p.q,p.s,p.m))}
 function entityInlineRoll(e,a,expr,resultEl,batch=false){const p=parseDice(expr);if(!p){toast(`Invalid dice: ${expr}`);return}const n=batch&&e.type==="Mob"?Math.max(1,Number(e.quantity)||1):1;if(n===1){const r=rollDice(p.q,p.s,p.m),label=`${p.q}d${p.s}${p.m?`${p.m>0?"+":""}${p.m}`:""} → ${r.total} [${r.rolls.join(", ")}]`;resultEl.textContent=label;logEvent(`${e.name} — ${a.name}: ${label}`)}else{const results=[];for(let i=0;i<n;i++)results.push(rollDice(p.q,p.s,p.m).total);const label=`×${n} ${expr}: ${results.join(", ")}`;resultEl.textContent=label;logEvent(`${e.name} — ${a.name}: ${label}`)}saveEvents()}
 function playerActionView(t,a){
- const x=document.createElement("div");x.className="player-action";
+ const x=document.createElement("div");const cat=bc092Kind(a.kind);x.className="player-action bc092-"+cat;
  const n=document.createElement("div");n.className="player-action-name";
  const limited=a.maxUses!==""&&a.maxUses!=null;
  const remaining=limited?Math.max(0,Number(a.currentUses??a.maxUses)||0):null;
- n.textContent=`${a.kind||"Action"}: ${a.name}`;
+ n.textContent=`${bc092Icon(cat)} ${a.name}`;
  if(limited){const badge=document.createElement("span");badge.className="uses-badge";badge.textContent=`${remaining}/${a.maxUses}`;n.append(badge)}
  const cdMax=Math.max(0,Number(a.cooldown)||0),cd=Math.max(0,Number(a.cooldownRemaining)||0);if(cdMax){const badge=document.createElement("span");badge.className="cooldown "+(cd<=0?"ready":"wait");badge.dataset.cooldownId=a.id;badge.textContent=cd<=0?"READY":`CD ${format(cd)}`;n.append(badge)}
  if(a.description){const ib=button("ⓘ","info-btn",()=>x.classList.toggle("tooltip-open"));ib.title="Show description";n.append(ib);const tip=document.createElement("div");tip.className="action-tooltip";tip.textContent=a.description;x.append(n,tip)}else{x.append(n)}
  if(a.reference||v085DiceSummary(a)){const r=document.createElement("div");r.className="player-action-ref";r.textContent=[v085DiceSummary(a),a.reference].filter(Boolean).filter((v,i,arr)=>arr.indexOf(v)===i).join(" · ");x.append(r)}
- const footer=document.createElement("div");footer.className="action-footer";const cost=Number(a.timeCost)||0;footer.append(button(cost?`USE −${cost}s`:"USE","",()=>usePlayerAction(t,a)));
+ const footer=document.createElement("div");footer.className="action-footer";const cost=Number(a.timeCost)||0;const use=button(cost?`USE −${cost}s`:"USE","",()=>usePlayerAction(t,a));use.disabled=(Number(a.cooldownRemaining)||0)>0||(limited&&remaining<=0);footer.append(use);
  if(limited)footer.append(button("RESET","",()=>resetPlayerActionUses(t,a)));
  x.append(footer);return x
 }
@@ -917,7 +993,7 @@ document.getElementById("entityEffectsForm").addEventListener("submit",ev=>{if(e
 document.getElementById("addRateEffect").onclick=()=>addEffectRow({id:uid(),name:"Active Rate",mode:"rate",amount:.10,condition:"active",interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
 document.getElementById("addPulseEffect").onclick=()=>addEffectRow({id:uid(),name:"Burning",mode:"pulse",amount:-5,condition:"always",interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
 document.getElementById("effectsForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingEffectsPlayerId);if(t){const was=t.running;if(was)freeze(t);const oldEffects=t.effects||[];t.effects=oldEffects.filter(x=>!["rate","pulse"].includes(x.mode));document.querySelectorAll("#effectsBuilder .effect-row").forEach(r=>{const duration=Math.max(0,Number(r.querySelector(".fx-duration").value)||0),prev=(t.effects||[]).find(x=>x.id===r.dataset.id);t.effects.push({id:r.dataset.id,name:r.querySelector(".fx-name").value.trim()||"Effect",mode:r.dataset.mode,amount:Number(r.querySelector(".fx-amount").value)||0,condition:r.querySelector(".fx-condition")?.value||"always",interval:Math.max(1,Number(r.querySelector(".fx-interval").value)||10),duration,remainingDuration:prev&&Number(prev.duration)===duration?Number(prev.remainingDuration??duration):duration,pulseElapsed:Number(prev?.pulseElapsed)||0})});if(was&&t.remaining>0){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining}logEvent(`${t.name}: timed effects updated`);saveAll();render()}document.getElementById("effectsDialog").close()});
-function savePlayerActions331(){const t=timers.find(x=>x.id===editingPlayerId);if(!t)return;t.playerActions=[];document.querySelectorAll("#playerActionBuilder .action-row").forEach(r=>{const maxRaw=r.querySelector(".ppa-max").value,currentRaw=r.querySelector(".ppa-current").value,maxUses=maxRaw===""?"":Math.max(0,Number(maxRaw)||0),currentUses=maxUses===""?"":Math.min(maxUses,Math.max(0,currentRaw===""?maxUses:(Number(currentRaw)||0)));t.playerActions.push({id:r.dataset.id,kind:r.querySelector(".ppa-kind").value,name:r.querySelector(".ppa-name").value.trim()||"Action",reference:r.querySelector(".ppa-ref").value.trim(),hitDice:r.querySelector(".ppa-hit").value.trim(),rollDice:r.querySelector(".ppa-hit").value.trim(),attackModifier:Number(r.querySelector(".ppa-hitmod").value)||0,damageDice:r.querySelector(".ppa-damage").value.trim(),damageModifier:Number(r.querySelector(".ppa-damagemod").value)||0,saveAbility:r.querySelector(".ppa-save").value.trim().toUpperCase(),saveDC:r.querySelector(".ppa-dc").value===""?"":Number(r.querySelector(".ppa-dc").value)||0,duration:Number(r.querySelector(".ppa-duration").value)||0,description:r.querySelector(".ppa-desc").value.trim(),timeCost:Math.max(0,Number(r.querySelector(".ppa-time").value)||0),cooldown:Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),cooldownRemaining:Math.min(Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),Math.max(0,Number((t.playerActions||[]).find(a=>a.id===r.dataset.id)?.cooldownRemaining)||0)),maxUses,currentUses})});logEvent(`${t.name}: actions updated`);saveAll();render();document.getElementById("playerActionDialog").close()}
+function savePlayerActions331(){const t=timers.find(x=>x.id===editingPlayerId);if(!t)return;const oldActions=t.playerActions||[];t.playerActions=[];document.querySelectorAll("#playerActionBuilder .action-row").forEach(r=>{const maxRaw=r.querySelector(".ppa-max").value,currentRaw=r.querySelector(".ppa-current").value,maxUses=maxRaw===""?"":Math.max(0,Number(maxRaw)||0),currentUses=maxUses===""?"":Math.min(maxUses,Math.max(0,currentRaw===""?maxUses:(Number(currentRaw)||0)));t.playerActions.push({id:r.dataset.id,kind:r.querySelector(".ppa-kind").value,name:r.querySelector(".ppa-name").value.trim()||"Action",reference:r.querySelector(".ppa-ref").value.trim(),hitDice:r.querySelector(".ppa-hit").value.trim(),rollDice:r.querySelector(".ppa-hit").value.trim(),attackModifier:Number(r.querySelector(".ppa-hitmod").value)||0,damageDice:r.querySelector(".ppa-damage").value.trim(),damageModifier:Number(r.querySelector(".ppa-damagemod").value)||0,saveAbility:r.querySelector(".ppa-save").value.trim().toUpperCase(),saveDC:r.querySelector(".ppa-dc").value===""?"":Number(r.querySelector(".ppa-dc").value)||0,duration:Number(r.querySelector(".ppa-duration").value)||0,description:r.querySelector(".ppa-desc").value.trim(),timeCost:Math.max(0,Number(r.querySelector(".ppa-time").value)||0),cooldown:Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),cooldownRemaining:Math.min(Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),Math.max(0,Number(oldActions.find(a=>a.id===r.dataset.id)?.cooldownRemaining)||0)),maxUses,currentUses})});logEvent(`${t.name}: actions updated`);saveAll();render();document.getElementById("playerActionDialog").close()}
 document.getElementById("savePlayerActions331").onclick=savePlayerActions331;
 document.getElementById("addPlayerActionRow").onclick=()=>addPlayerActionRow();
 document.getElementById("playerActionForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingPlayerId);if(t){t.playerActions=[];document.querySelectorAll("#playerActionBuilder .builder-row").forEach(r=>(()=>{const maxRaw=r.querySelector(".ppa-max").value,currentRaw=r.querySelector(".ppa-current").value,maxUses=maxRaw===""?"":Math.max(0,Number(maxRaw)||0),currentUses=maxUses===""?"":Math.min(maxUses,Math.max(0,currentRaw===""?maxUses:(Number(currentRaw)||0)));return{id:r.dataset.id,kind:r.querySelector(".ppa-kind").value,name:r.querySelector(".ppa-name").value.trim()||"Action",reference:r.querySelector(".ppa-ref").value.trim(),hitDice:r.querySelector(".ppa-hit").value.trim(),rollDice:r.querySelector(".ppa-hit").value.trim(),attackModifier:Number(r.querySelector(".ppa-hitmod").value)||0,damageDice:r.querySelector(".ppa-damage").value.trim(),damageModifier:Number(r.querySelector(".ppa-damagemod").value)||0,saveAbility:r.querySelector(".ppa-save").value.trim().toUpperCase(),saveDC:r.querySelector(".ppa-dc").value===""?"":Number(r.querySelector(".ppa-dc").value)||0,duration:Number(r.querySelector(".ppa-duration").value)||0,description:r.querySelector(".ppa-desc").value.trim(),timeCost:Math.max(0,Number(r.querySelector(".ppa-time").value)||0),cooldown:Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),cooldownRemaining:Math.min(Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),Math.max(0,Number((t.playerActions||[]).find(a=>a.id===r.dataset.id)?.cooldownRemaining)||0)),maxUses,currentUses}})());logEvent(`${t.name}: player actions updated`);saveAll();render()}document.getElementById("playerActionDialog").close()});
