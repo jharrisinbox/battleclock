@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BattleClock v0.9.2.2</title>
+<title>BattleClock v0.9.2.3</title>
 <style>
 :root{--bg:#15171a;--panel:#24282d;--panel2:#1c1f23;--text:#f3f4f6;--muted:#aeb4bd;--border:#444b55;--run:#43d17a;--danger:#ff5c5c}
 *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
@@ -151,7 +151,7 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 </head>
 <body>
 <header>
-<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.9.2.2</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
+<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.9.2.3</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
 <div class="header-buttons">
 <span id="partyStatus" class="party-status" style="display:none">PARTY VIEW OFFLINE</span>
 <button id="partyConnect">CONNECT PARTY VIEW</button>
@@ -375,6 +375,7 @@ function bc092Render(){
   const area=bc092El("textarea",{"data-field":"notes",rows:"10",style:"width:100%;box-sizing:border-box",placeholder:"Character background, rules, tactical reminders..."});area.value=bc092Draft.notes;p.append(area);
  }
 }
+window.bc092Open=bc092Open;
 document.getElementById("bc092Close").onclick=()=>document.getElementById("bc092Editor").close();
 document.getElementById("bc092Save").onclick=bc092Save;
 
@@ -660,7 +661,7 @@ function timerCard(t){
  const stats=Object.assign({STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},t.stats||{});
  ["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>{const z=document.createElement("div");z.className="ability";const base=Number(stats[k])||0,mod=Math.floor((base-10)/2),bonus=Number(stats["bonus"+k])||0;z.innerHTML=`<b>${k}</b><span><span class="stat-base">${base}</span><span class="stat-mod">${mod>=0?"+":""}${mod}</span>${bonus?`<span class="stat-temp">${bonus>0?"+":""}${bonus}</span>`:""}</span>`;statWrap.append(z)});
  const ac=document.createElement("div");ac.className="ability";ac.innerHTML=`<b>AC</b><span>🛡 ${stats.AC}</span>`;statWrap.append(ac);
- const statEdit=button("EDIT PLAYER","stats-edit",()=>bc092Open(t));
+ const statEdit=button("EDIT PLAYER","stats-edit",()=>window.bc092Open(t));
  const turn=document.createElement("div");turn.className="turn-banner "+(t.turnState==="passive"?"passive":"active");turn.textContent=`${Math.round(timeRate(t)*100)}%`;turn.title=t.turnState==="passive"?"PASSIVE / NOT MY TURN":"ACTIVE / MY TURN";
  const clock=document.createElement("div");clock.className="clock";clock.textContent=format(sec);clock.title="Click to start or stop";clock.onclick=()=>toggle(t);
  const controls=document.createElement("div");controls.className="controls";
@@ -669,7 +670,7 @@ function timerCard(t){
  [5,10,30].forEach(x=>controls.append(button(`+${x}`,"adjust",()=>adjust(t,x))));
  const effectsLine=document.createElement("div");effectsLine.className="effects-line";const rate=timeRate(t);if(rate!==1){const b=document.createElement("span");b.className="effect-badge";b.textContent=`⏱ ${rate.toFixed(2)}×`;effectsLine.append(b)}(t.effects||[]).forEach(x=>{const b=document.createElement("span");b.className="effect-badge";b.textContent=`${x.name}${x.duration>0?` ${format(x.remainingDuration??x.duration)}`:""}`;effectsLine.append(b)});
  const secondary=document.createElement("div");secondary.className="secondary";secondary.append(button("SET TIME","",()=>openSetTime(t)),button("EFFECTS","",()=>openEffects(t)));
- const pa=document.createElement("div");pa.className="player-actions";const ph=document.createElement("div");ph.className="player-actions-head";ph.innerHTML="<strong>ACTIONS / SPELLS / ITEMS</strong>";ph.append(button("EDIT PLAYER","",()=>bc092Open(t,"Items")));pa.append(ph);if((t.playerActions||[]).length){const pl=document.createElement("div");pl.className="player-action-list";t.playerActions.forEach(a=>pl.append(playerActionView(t,a)));pa.append(pl)}card.append(head,statWrap,statEdit,turn,clock,effectsLine,controls,secondary,pa);return card
+ const pa=document.createElement("div");pa.className="player-actions";const ph=document.createElement("div");ph.className="player-actions-head";ph.innerHTML="<strong>ACTIONS / SPELLS / ITEMS</strong>";ph.append(button("EDIT PLAYER","",()=>window.bc092Open(t,"Items")));pa.append(ph);if((t.playerActions||[]).length){const pl=document.createElement("div");pl.className="player-action-list";t.playerActions.forEach(a=>pl.append(playerActionView(t,a)));pa.append(pl)}card.append(head,statWrap,statEdit,turn,clock,effectsLine,controls,secondary,pa);return card
 }
 
 function compEffective(c,now=Date.now()){if(c.kind!=="timer"||!c.running)return Math.max(0,Number(c.value)||0);return Math.max(0,(Number(c.startValue)||0)-Math.floor((now-c.startedAt)/1000))}
