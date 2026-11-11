@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BattleClock v0.8.5</title>
+<title>BattleClock v0.9.0</title>
 <style>
 :root{--bg:#15171a;--panel:#24282d;--panel2:#1c1f23;--text:#f3f4f6;--muted:#aeb4bd;--border:#444b55;--run:#43d17a;--danger:#ff5c5c}
 *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
@@ -133,26 +133,29 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 /* v0.8.2 dashboard refinements */
 .dice-panel{padding:7px 10px!important;margin:7px 0!important}.dice-panel .sub{display:none}.dice-controls{gap:4px!important}.dice-controls button{padding:5px 7px!important}.dice-result,.dice-expression{display:inline-block!important;margin:2px 8px!important;font-size:12px!important}
 .library-tabs{display:flex;gap:5px;flex-wrap:wrap;margin:10px 0}.library-tabs button.selected{background:#315b83;border-color:#6ea7e2}.library-entry{border:1px solid #424b54;padding:9px;border-radius:8px;margin:5px 0;display:flex;justify-content:space-between;align-items:center;gap:8px}.library-entry .controls{display:flex;gap:5px;flex-wrap:wrap}.note-area{width:100%;min-height:260px;font:14px ui-monospace,monospace;white-space:pre-wrap;tab-size:4}.effect-chip{display:inline-block;margin:3px;padding:4px 6px;border-radius:6px;border:1px solid #596475;background:#242b34;font-size:11px}.v081-leak{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.v081-leak input{width:160px}.v081-engaged{width:145px!important;font-size:12px}.v081-dice-hit{border:1px solid #4776ae;border-radius:7px;padding:5px;background:#183047}.v081-dice-damage{border:1px solid #af594b;border-radius:7px;padding:5px;background:#422522}
+
+/* v0.9.0: compact two-column encounter dashboard and shared drag initiative */
+#bc09Dashboard{margin:8px 0}.bc09-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}.bc09-side{min-width:0}.bc09-side>h2{font-size:15px;margin:6px 0 10px}.bc09-side #players,.bc09-side #entities{display:flex;flex-direction:column;gap:6px;min-width:0}.bc09-shell{border:1px solid #354756;border-radius:9px;min-width:0;overflow:hidden}.bc09-shell.active{border:2px solid #5acb90}.bc09-shell .bc09-summary{display:flex;gap:8px;align-items:center;padding:8px;background:#1c2731;cursor:pointer;font-size:13px}.bc09-summary strong{flex:1}.bc09-shell .bc09-details{display:none;padding:5px}.bc09-shell.open .bc09-details{display:block}.bc09-details article{margin:0!important;width:100%!important;max-width:none!important;min-width:0!important;box-sizing:border-box}.bc09-details .timer,.bc09-details .entity-card{padding:8px!important}.bc09-details button{font-size:10px!important;padding:4px 6px!important}.bc09-details .controls{gap:3px!important;flex-wrap:wrap}.bc09-details .mob-hp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.bc09-details .mob-hp-row{min-width:0}.bc09-details .entity-tools{gap:3px;flex-wrap:wrap}.bc09-details .status{font-size:10px}.bc09-details .name{font-size:15px}.bc09-details .clock{font-size:26px!important}.bc09-details .ability-strip{flex-wrap:wrap}#bc09Initiative{background:#151f29;border:1px solid #354756;border-radius:10px;padding:10px;margin:10px 0}.bc09-init-list{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0}.bc09-init-entry{padding:8px;border:1px solid #3a4b5b;background:#202b36;border-radius:7px;cursor:grab;user-select:none;font-size:12px}.bc09-init-entry.active{border-color:#59d49c;background:#214536}.bc09-init-entry.dragover{outline:2px dashed #9ecaff}.bc09-lap{font-variant-numeric:tabular-nums;font-size:24px;font-weight:700}.bc09-init-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.bc09-init-tools button{padding:7px 10px}.bc09-bank-compact .controls button,.library-entry .controls button{font-size:10px!important;padding:3px 6px!important}.library-entry{padding:5px!important;gap:4px!important}.library-entry .controls{gap:3px!important}.event-panel,#v08Initiative,#v08Players,.timeline-panel{display:none!important}@media(max-width:800px){.bc09-columns{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <header>
-<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.8.2</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
+<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.9.0</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
 <div class="header-buttons">
-<span id="partyStatus" class="party-status">PARTY VIEW OFFLINE</span>
+<span id="partyStatus" class="party-status" style="display:none">PARTY VIEW OFFLINE</span>
 <button id="partyConnect">CONNECT PARTY VIEW</button>
 <button id="gameSettings">GAME SETTINGS ⚙</button>
 <button id="exportSave">EXPORT SAVE</button>
 <button id="importSave">IMPORT SAVE</button>
 <input id="importSaveFile" type="file" accept=".json,application/json" hidden>
 <button id="playersToggle" class="state-switch on">PLAYERS · RUNNING</button>
-<button id="eventsToggle" class="state-switch on">EVENTS · RUNNING</button>
-<button id="pauseAll" class="state-switch on">ALL · RUNNING</button>
+<button style="display:none" id="eventsToggle" class="state-switch on">EVENTS · RUNNING</button>
+<button style="display:none" id="pauseAll" class="state-switch on">ALL · RUNNING</button>
 <button id="creatureBank">LIBRARY / BANKS</button><button id="dmNotepad">DM NOTEPAD</button><button id="addEntity" class="primary">+ ADD ENTITY</button>
 </div>
 </header>
 <main>
-<section id="players"></section>
+<section id="bc09Dashboard"><div class="bc09-columns"><div class="bc09-side"><h2>⚔️ Party</h2><section id="players"></section></div><div class="bc09-side"><h2>🐉 Encounter</h2><section id="entities"></section><div id="emptyEntities" class="empty">No encounter entries.</div></div></div></section><section id="bc09Initiative"></section>
 <section class="dice-panel"><strong>DM DICE</strong><div class="sub">Electronic rolls for NPCs, mobs, traps and hazards only.</div><div class="dice-controls" id="quickDice"><button data-die="4">d4</button><button data-die="6">d6</button><button data-die="8">d8</button><button data-die="10">d10</button><button data-die="12">d12</button><button data-die="20" class="die-selected">d20</button><button data-die="100">d100</button><label>Qty <input id="diceQty" type="number" min="1" max="100" value="1"></label><label>Mod <input id="diceMod" type="number" value="0"></label><button id="diceRoll" type="button">ROLL</button></div><div id="diceExpression" class="dice-expression">1d20</div><div id="diceResult" class="dice-result">Ready.</div></section>
 <section class="timeline-panel" style="display:none">
 <div class="timeline-head"><div><strong>ENCOUNTER TIMELINE</strong><div class="sub">Recurring mob initiative, hazards, reinforcements, and scheduled events.</div></div><button id="addTimelineEvent" class="primary">+ EVENT</button></div>
@@ -160,7 +163,7 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 <div id="emptyTimeline" class="empty" style="display:none">No encounter events. Add one for initiative, hazards, reinforcements, or anything else that should happen on a clock.</div>
 </section>
 <div class="custom-title"><h2>Session Entities</h2><span class="sub">Build NPCs, objectives, hazards, machines, effects, or other session mechanics from reusable components.</span></div>
-<section id="entities"></section><div id="hiddenEntities" class="hidden-panel" style="display:none"><strong>HIDDEN / STAGED ENTITIES</strong><div class="sub">Prepared entities hidden from the active session area.</div><div id="hiddenEntityList" class="hidden-list"></div></div><div id="emptyEntities" class="empty">No session entities yet. Use + ADD ENTITY to build one.</div><section class="event-panel"><div class="event-head"><h2>Event History</h2><button id="clearEvents">CLEAR</button></div><div id="eventLog" class="event-log"></div></section>
+<div id="hiddenEntities" class="hidden-panel" style="display:none"><strong>HIDDEN / STAGED ENTITIES</strong><div class="sub">Prepared entities hidden from the active session area.</div><div id="hiddenEntityList" class="hidden-list"></div></div><div id="emptyEntities" class="empty">No session entities yet. Use + ADD ENTITY to build one.</div>
 <div class="footer-note">BattleClock stores the DM game locally in this browser. When Party View is connected, player clocks/effects, visible entity components, and public encounter events are published. Player dice and arithmetic remain manual.</div>
 </main>
 <div id="toast" class="toast"></div>
@@ -308,7 +311,7 @@ function loadCreatureBank(){try{return JSON.parse(localStorage.getItem(CREATURE_
 function saveCreatureBank(){localStorage.setItem(CREATURE_BANK_KEY,JSON.stringify(creatureBank))}
 function cloneCreature(x){const c=JSON.parse(JSON.stringify(x));c.id=uid();c.visible=true;c.selectedMob=0;c.components=(c.components||[]).map(z=>({...z,id:uid(),running:false,startedAt:null,startValue:null}));c.actions=(c.actions||[]).map(z=>({...z,id:uid()}));c.effects=[];if(c.type==="Mob"){const q=Math.max(1,Number(c.quantity)||1),mx=Math.max(1,Number(c.mobHPMax)||10);c.mobHP=Array(q).fill(mx);c.initiative={interval:Number(c.initiative?.interval)||0,remaining:Number(c.initiative?.interval)||0,running:false,startedAt:null,startRemaining:null}}return c}
 function saveCreatureToBank(e){const copy=JSON.parse(JSON.stringify(e));copy.bankId=uid();copy.id=undefined;copy.visible=true;if(copy.initiative){copy.initiative.running=false;copy.initiative.remaining=copy.initiative.interval;copy.initiative.startedAt=null;copy.initiative.startRemaining=null}creatureBank.push(copy);saveCreatureBank();toast(`${e.name} saved to Creature Bank.`)}
-function renderCreatureBank(){const h=document.getElementById("creatureBankList");h.innerHTML="";if(!creatureBank.length){h.innerHTML='<div class="empty" style="grid-column:1/-1">Creature Bank is empty. Build a creature in Session Entities, then use SAVE TO BANK.</div>';return}creatureBank.forEach(c=>{const d=document.createElement("div");d.className="bank-card";d.innerHTML=`<strong>${escapeHtml(c.name)}</strong><div class="sub">${escapeHtml(c.type)}${c.type==="Mob"?` · ×${c.quantity||1} · ${c.mobHPMax||10} HP`:""}</div>`;d.append(button("DEPLOY","primary",()=>{const count=c.type==="Mob"?prompt(`How many ${c.name} to deploy?`,String(c.quantity||1)):null;if(c.type==="Mob"&&count===null)return;const ent=cloneCreature(c);if(c.type==="Mob"){ent.quantity=Math.max(1,Math.min(99,Math.floor(Number(count)||1)));ent.mobHP=Array(ent.quantity).fill(Math.max(1,Number(ent.mobHPMax)||10))}entities.push(ent);saveAll();render();toast(`${c.name} deployed.`)}),button("DELETE","danger",()=>{if(confirm(`Delete ${c.name} from Creature Bank?`)){creatureBank=creatureBank.filter(x=>x.bankId!==c.bankId);saveCreatureBank();renderCreatureBank()}}));h.append(d)})}
+function renderCreatureBank(){const h=document.getElementById("creatureBankList");h.innerHTML="";if(!creatureBank.length){h.innerHTML='<div class="empty" style="grid-column:1/-1">Creature Bank is empty. Build a creature in Session Entities, then use SAVE TO BANK.</div>';return}creatureBank.forEach(c=>{const d=document.createElement("div");d.className="bank-card";d.innerHTML=`<strong>${escapeHtml(c.name)}</strong><div class="sub">${escapeHtml(c.type)}${c.type==="Mob"?` · ×${c.quantity||1} · ${c.mobHPMax||10} HP`:""}</div>`;d.append(button("DEPLOY","primary",()=>{const count=c.type==="Mob"?prompt(`How many ${c.name} to deploy?`,String(c.quantity||1)):null;if(c.type==="Mob"&&count===null)return;const ent=cloneCreature(c);if(c.type==="Mob"){ent.quantity=Math.max(1,Math.min(10,Math.floor(Number(count)||1)));ent.mobHP=Array(ent.quantity).fill(Math.max(1,Number(ent.mobHPMax)||10))}entities.push(ent);saveAll();render();toast(`${c.name} deployed.`)}),button("DELETE","danger",()=>{if(confirm(`Delete ${c.name} from Creature Bank?`)){creatureBank=creatureBank.filter(x=>x.bankId!==c.bankId);saveCreatureBank();renderCreatureBank()}}));h.append(d)})}
 
 
 // v0.8.2: reusable templates are kept separate from live instances.
@@ -582,11 +585,11 @@ function timerCard(t){
  const turn=document.createElement("div");turn.className="turn-banner "+(t.turnState==="passive"?"passive":"active");turn.textContent=`${Math.round(timeRate(t)*100)}%`;turn.title=t.turnState==="passive"?"PASSIVE / NOT MY TURN":"ACTIVE / MY TURN";
  const clock=document.createElement("div");clock.className="clock";clock.textContent=format(sec);clock.title="Click to start or stop";clock.onclick=()=>toggle(t);
  const controls=document.createElement("div");controls.className="controls";
- [-30,-15,-10,-5].forEach(x=>controls.append(button(`−${Math.abs(x)}`,"adjust",()=>adjust(t,x))));
+ [-30,-10,-5].forEach(x=>controls.append(button(`−${Math.abs(x)}`,"adjust",()=>adjust(t,x))));
  controls.append(button(t.running?"STOP":"START","toggle",()=>toggle(t)));
- [5,10,15,30].forEach(x=>controls.append(button(`+${x}`,"adjust",()=>adjust(t,x))));
+ [5,10,30].forEach(x=>controls.append(button(`+${x}`,"adjust",()=>adjust(t,x))));
  const effectsLine=document.createElement("div");effectsLine.className="effects-line";const rate=timeRate(t);if(rate!==1){const b=document.createElement("span");b.className="effect-badge";b.textContent=`⏱ ${rate.toFixed(2)}×`;effectsLine.append(b)}(t.effects||[]).forEach(x=>{const b=document.createElement("span");b.className="effect-badge";b.textContent=`${x.name}${x.duration>0?` ${format(x.remainingDuration??x.duration)}`:""}`;effectsLine.append(b)});
- const secondary=document.createElement("div");secondary.className="secondary";secondary.append(button("SET TIME","",()=>openSetTime(t)),button("EFFECTS","",()=>openEffects(t)),button(`RESET ${format(game.defaultSeconds)}`,"",()=>reset(t)));
+ const secondary=document.createElement("div");secondary.className="secondary";secondary.append(button("SET TIME","",()=>openSetTime(t)),button("EFFECTS","",()=>openEffects(t)));
  const pa=document.createElement("div");pa.className="player-actions";const ph=document.createElement("div");ph.className="player-actions-head";ph.innerHTML="<strong>ACTIONS / SPELLS / ITEMS</strong>";ph.append(button("EDIT","",()=>openPlayerActions(t)));pa.append(ph);if((t.playerActions||[]).length){const pl=document.createElement("div");pl.className="player-action-list";t.playerActions.forEach(a=>pl.append(playerActionView(t,a)));pa.append(pl)}card.append(head,statWrap,statEdit,turn,clock,effectsLine,controls,secondary,pa);return card
 }
 
@@ -612,11 +615,11 @@ function componentView(entity,c){
 function v081EffectiveAC(e){const base=Number(e.ac??8)||0;return base+(e.effects||[]).filter(x=>x.mode==="ac"||(x.mode==="stat"&&String(x.target).toUpperCase()==="AC")).reduce((a,x)=>a+(Number(x.amount)||0),0)}
 function v081EffectTick(dt){let changed=false;for(const e of [...timers,...entities]){if(!e.effects?.length)continue;const expired=[];for(const x of e.effects){if(!["ac","stat","hp","condition"].includes(x.mode))continue;if(Number(x.duration)>0){x.remainingDuration=Math.max(0,(Number(x.remainingDuration??x.duration)||0)-dt);if(x.remainingDuration<=0){expired.push(x.id);continue}}if(x.mode==="hp"&&e.type==="Mob"){x.pulseElapsed=(Number(x.pulseElapsed)||0)+dt;const every=Math.max(1,Number(x.interval)||10);if(x.pulseElapsed>=every){x.pulseElapsed%=every;ensureMobHP(e);const i=e.selectedMob||0;e.mobHP[i]=Math.max(0,Math.min(e.mobHPMax,e.mobHP[i]+(Number(x.amount)||0)));logEvent(`${e.name}: ${x.name} ${x.amount>0?"heals":"damages"} ${Math.abs(x.amount)} HP`);changed=true}}}if(expired.length){e.effects=e.effects.filter(x=>!expired.includes(x.id));changed=true}}return changed}
 function ensureMobHP(e){
- const q=Math.max(1,Number(e.quantity)||1);if(e.type!=="Mob")return;const max=Math.max(1,Number(e.mobHPMax)||10);
+ const q=Math.min(10,Math.max(1,Number(e.quantity)||1));if(e.type!=="Mob")return;const max=Math.max(1,Number(e.mobHPMax)||10);
  if(!Array.isArray(e.mobHP))e.mobHP=[];while(e.mobHP.length<q)e.mobHP.push(max);e.mobHP=e.mobHP.slice(0,q).map(v=>Math.max(0,Math.min(max,Number(v)??max)));e.mobHPMax=max;e.selectedMob=Math.max(0,Math.min(q-1,Number(e.selectedMob)||0));
 }
 function mobHPView(e){
- ensureMobHP(e);if(e.type!=="Mob")return null;const box=document.createElement("div");box.className="mob-hp";const q=Math.max(1,Number(e.quantity)||1),max=Math.max(1,Number(e.mobHPMax)||10);
+ ensureMobHP(e);if(e.type!=="Mob")return null;const box=document.createElement("div");box.className="mob-hp";const q=Math.min(10,Math.max(1,Number(e.quantity)||1)),max=Math.max(1,Number(e.mobHPMax)||10);
  for(let i=0;i<q;i++){const row=document.createElement("div");row.className="mob-hp-row"+(i===e.selectedMob?" selected":"")+(e.mobHP[i]<=0?" down":"");row.onclick=()=>{e.selectedMob=i;saveAll();render()};const lab=document.createElement("b");lab.textContent=`#${i+1}`;const tr=document.createElement("div");tr.className="mob-hp-track";const fill=document.createElement("div");fill.className="mob-hp-fill";fill.style.width=`${Math.max(0,Math.min(100,e.mobHP[i]/max*100))}%`;tr.append(fill);const val=document.createElement("div");val.className="mob-hp-value";val.textContent=e.mobHP[i]<=0?"DOWN":`${e.mobHP[i]}/${max}`;row.append(lab,tr,val);box.append(row)}
  const ctr=document.createElement("div");ctr.className="mob-hp-controls-v7";const amt=document.createElement("input");amt.type="number";amt.min="0";amt.value="1";ctr.append(amt,button("APPLY DAMAGE","danger",()=>changeMobHP(e,-Math.abs(Number(amt.value)||0))),button("ADD HEALTH","",()=>changeMobHP(e,Math.abs(Number(amt.value)||0))),button("RESET HP","",()=>{e.mobHP=Array(q).fill(max);saveAll();render()}));box.append(ctr);return box
 }
@@ -634,7 +637,7 @@ function entityCard(e){
  const head=document.createElement("div");head.className="entity-head";
  const left=document.createElement("div");left.innerHTML=`<div class="entity-title"></div><div class="entity-type"></div>`;left.querySelector(".entity-title").textContent=e.name;left.querySelector(".entity-type").textContent=e.type+(e.type==="Mob"?` · ×${Math.max(1,Number(e.quantity)||1)}`:"");
  const tools=document.createElement("div");tools.className="entity-tools";tools.append(button("SAVE TO BANK","",()=>saveCreatureToBank(e)),button("EFFECTS","",()=>openEntityEffects(e)),button("HIDE","",()=>setEntityVisibility(e,false)),button("EDIT","",()=>openEntityBuilder(e)),button("DELETE","danger",()=>deleteEntity(e)));head.append(left,tools);card.append(head);
- const mh=mobHPView(e);if(mh)card.append(mh);const mi=mobInitiativeView(e);if(mi)card.append(mi); const list=document.createElement("div");list.className="component-list";(e.components||[]).forEach(c=>list.append(componentView(e,c)));if(e.components?.length)card.append(list);
+ const mh=mobHPView(e);if(mh)card.append(mh);const mi=null;if(mi)card.append(mi); const list=document.createElement("div");list.className="component-list";(e.components||[]).forEach(c=>list.append(componentView(e,c)));if(e.components?.length)card.append(list);
  if(e.actions?.length){const actions=document.createElement("div");actions.className="entity-actions";e.actions.forEach(a=>{const wrap=document.createElement("div");wrap.className="entity-action-box";const title=document.createElement("strong");title.textContent=a.name||"ACTION";wrap.append(title);if(a.reference){const r=document.createElement("div");r.className="action-ref";r.textContent=a.reference;wrap.append(r)}const rb=document.createElement("div");rb.className="entity-action-rolls";const result=document.createElement("div");result.className="entity-action-result";
  if(a.attackMod!==""&&a.attackMod!=null){const m=Number(a.attackMod)||0,expr=`1d20${m?`${m>0?"+":""}${m}`:""}`;rb.append(button(`ROLL ATTACK d20${m?`${m>0?"+":""}${m}`:""}`,"",()=>entityInlineRoll(e,a,expr,result)));if(e.type==="Mob"&&Number(e.quantity)>1)rb.append(button(`ROLL ATTACK ×${Math.max(1,Number(e.quantity)||1)}`,"",()=>entityInlineRoll(e,a,expr,result,true)))}
  if(a.damageDice){rb.append(button(`ROLL DAMAGE ${a.damageDice}`,"",()=>entityInlineRoll(e,a,a.damageDice,result)));if(e.type==="Mob"&&Number(e.quantity)>1)rb.append(button(`ROLL DAMAGE ×${Math.max(1,Number(e.quantity)||1)}`,"",()=>entityInlineRoll(e,a,a.damageDice,result,true)))}
@@ -724,12 +727,12 @@ function v084ConfirmMobDelete(){
 
 function render(){
  const p=document.getElementById("players"),e=document.getElementById("entities"),hp=document.getElementById("hiddenEntities"),hl=document.getElementById("hiddenEntityList");p.innerHTML="";e.innerHTML="";hl.innerHTML="";
- timers.forEach(t=>p.append(timerCard(t)));renderPlayerQueue();renderInitiativeQueue();
+ timers.forEach(t=>p.append(bc09Wrap(t.id,"player",timerCard(t))));
  const visible=entities.filter(x=>x.visible!==false),hidden=entities.filter(x=>x.visible===false);
- visible.forEach(x=>{const card=entityCard(x);if(x.type==="Mob"){const ac=document.createElement("div");ac.className="effect-chip";ac.textContent=`AC ${v081EffectiveAC(x)}${(x.ac??8)!==v081EffectiveAC(x)?` (base ${x.ac??8})`:""}`;card.append(ac)}(x.effects||[]).forEach(f=>{const badge=document.createElement("span");badge.className="effect-chip";badge.textContent=`${f.name}: ${f.mode==="ac"?`${f.amount>0?"+":""}${f.amount} AC`:f.mode==="stat"?`${f.amount>0?"+":""}${f.amount} ${f.target}`:f.mode==="hp"?`${f.amount} HP / ${f.interval}s`:f.mode}`;card.append(badge)});e.append(card)});
+ visible.forEach(x=>{const card=entityCard(x);if(x.type==="Mob"){const ac=document.createElement("div");ac.className="effect-chip";ac.textContent=`AC ${v081EffectiveAC(x)}${(x.ac??8)!==v081EffectiveAC(x)?` (base ${x.ac??8})`:""}`;card.append(ac)}(x.effects||[]).forEach(f=>{const badge=document.createElement("span");badge.className="effect-chip";badge.textContent=`${f.name}: ${f.mode==="ac"?`${f.amount>0?"+":""}${f.amount} AC`:f.mode==="stat"?`${f.amount>0?"+":""}${f.amount} ${f.target}`:f.mode==="hp"?`${f.amount} HP / ${f.interval}s`:f.mode}`;card.append(badge)});e.append(bc09Wrap(x.id,"encounter",card))});
  v081StyleDiceButtons();hidden.forEach(x=>{const chip=document.createElement("div");chip.className="hidden-chip";const label=document.createElement("span");label.textContent=`${x.name} (${x.type})`;chip.append(label,button("SHOW","",()=>setEntityVisibility(x,true)));hl.append(chip)});
  hp.style.display=hidden.length?"block":"none";
- document.getElementById("emptyEntities").style.display=visible.length?"none":"block";renderEvents();renderTimeline();
+ document.getElementById("emptyEntities").style.display=visible.length?"none":"block";bc09RenderInitiative();
 }
 
 function renderTimeline(){
@@ -794,7 +797,7 @@ function saveGame(){localStorage.setItem(GAME_KEY,JSON.stringify(game))}
 function loadEvents(){try{return JSON.parse(localStorage.getItem(EVENT_KEY)||localStorage.getItem("battleClock_events_v01")||"[]")}catch(e){return[]}}
 function saveEvents(){localStorage.setItem(EVENT_KEY,JSON.stringify(events.slice(-250)))}
 function logEvent(message){events.push({at:Date.now(),message});if(events.length>250)events=events.slice(-250);saveEvents();renderEvents()}
-function renderEvents(){const el=document.getElementById("eventLog");if(!el)return;el.innerHTML="";if(!events.length){el.innerHTML='<div class="empty">No events yet.</div>';return}events.slice().reverse().slice(0,80).forEach(x=>{const row=document.createElement("div");row.className="event-row";const tm=document.createElement("div");tm.className="event-time";tm.textContent=new Date(x.at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"});const msg=document.createElement("div");msg.textContent=x.message;row.append(tm,msg);el.append(row)})}
+function renderEvents(){return;const el=document.getElementById("eventLog");if(!el)return;el.innerHTML="";if(!events.length){el.innerHTML='<div class="empty">No events yet.</div>';return}events.slice().reverse().slice(0,80).forEach(x=>{const row=document.createElement("div");row.className="event-row";const tm=document.createElement("div");tm.className="event-time";tm.textContent=new Date(x.at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"});const msg=document.createElement("div");msg.textContent=x.message;row.append(tm,msg);el.append(row)})}
 function notifyZero(t){if(t.zeroNotified)return;t.zeroNotified=true;logEvent(`${t.name} is OUT OF TIME`);saveAll()}
 function toast(msg){const x=document.getElementById("toast");x.textContent=msg;x.style.display="block";clearTimeout(toast._t);toast._t=setTimeout(()=>x.style.display="none",3000)}
 function openRename(t){renamingId=t.id;const i=document.getElementById("renameInput");i.value=t.name;document.getElementById("renameDialog").showModal();setTimeout(()=>{i.focus();i.select()},0)}
@@ -892,7 +895,7 @@ async function pollPlayerControls(){
  let changed=false;
  for(const r of (data||[])){const t=timers.find(x=>x.id===r.player_id);if(!t)continue;
   if((r.turn_state==="active"||r.turn_state==="passive")&&t.turnState!==r.turn_state&&!(r.action_request?.type==="queue")){toggleTurnState(t,r.turn_state);changed=true}
-  const req=r.action_request||{},nonce=req.nonce;if(nonce&&processedPlayerCommands.get(t.id)!==nonce&&req.type==="queue"){v08PlayerCommand(t,req.command);processedPlayerCommands.set(t.id,nonce);changed=true;continue}if(nonce&&processedPlayerCommands.get(t.id)!==nonce){const a=(t.playerActions||[]).find(x=>x.id===req.action_id);if(a){usePlayerAction(t,a);processedPlayerCommands.set(t.id,nonce);changed=true}}
+  const req=r.action_request||{},nonce=req.nonce;if(nonce&&processedPlayerCommands.get(t.id)!==nonce&&req.type==="queue"){bc09PartyCommand(t,req.command);processedPlayerCommands.set(t.id,nonce);changed=true;continue}if(nonce&&processedPlayerCommands.get(t.id)!==nonce){const a=(t.playerActions||[]).find(x=>x.id===req.action_id);if(a){usePlayerAction(t,a);processedPlayerCommands.set(t.id,nonce);changed=true}}
  }
  if(changed)schedulePartyPublish(true)
 }
@@ -958,11 +961,31 @@ function gameLogicTick(now=Date.now()){
    if(effective(t,now)<=0){t.remaining=0;freeze(t);notifyZero(t);rerender=true}
  });
  entities.forEach(e=>(e.components||[]).forEach(c=>{if(c.kind==="timer"&&c.running&&compEffective(c,now)<=0){c.value=0;freezeComp(c);logEvent(`${e.name}: ${c.name} reached 0:00`);rerender=true}}));
- if(v081EffectTick(dt))rerender=true;v081LeakTick(dt);const activeMob=currentMob();if(v08.mobRunning&&activeMob?.initiative?.running&&initiativeEffective(activeMob,now)<=0){mobAdvance();rerender=true}
+ if(v081EffectTick(dt))rerender=true;bc09Tick(now);
  timeline.forEach(x=>{if(x.running&&timelineEffective(x,now)<=0){x.remaining=0;freezeTimeline(x);logEvent(`${x.name}: DUE`);rerender=true}});
  if(rerender){saveAll();render();renderTimeline()}
  schedulePartyPublish();
 }
+
+
+// v0.9.0: independent initiative/lap stopwatch. Existing resource clock engine is unchanged.
+const BC09_KEY="battleclock_v090_initiative";
+let bc09=(()=>{try{return Object.assign({order:[],active:null,round:1,lapStart:null,lapElapsed:0,expanded:[],running:false},JSON.parse(localStorage.getItem(BC09_KEY)||"{}"))}catch(e){return{order:[],active:null,round:1,lapStart:null,lapElapsed:0,expanded:[],running:false}}})();
+function bc09Save(){localStorage.setItem(BC09_KEY,JSON.stringify(bc09))}
+function bc09Entries(){return [...timers.map(t=>({id:t.id,name:t.name,type:"player",icon:t.icon||"⚔️"})),...entities.filter(e=>e.visible!==false).map(e=>({id:e.id,name:e.name,type:"encounter",icon:e.icon||(e.type==="Mob"?"👹":e.type==="Hazard"?"⚠️":"🪤")}))]}
+function bc09Sync(){const ids=bc09Entries().map(x=>x.id);bc09.order=bc09.order.filter(x=>ids.includes(x));for(const id of ids)if(!bc09.order.includes(id))bc09.order.push(id);if(!bc09.order.includes(bc09.active)){bc09.active=bc09.order[0]||null;bc09.running=false;bc09.lapElapsed=0;bc09.lapStart=null}bc09Save()}
+function bc09Lap(now=Date.now()){return Math.min(120,Math.max(0,Number(bc09.lapElapsed)||0)+(bc09.running&&bc09.lapStart?Math.max(0,(now-bc09.lapStart)/1000):0))}
+function bc09Advance(){bc09Sync();if(!bc09.order.length)return;const i=bc09.order.indexOf(bc09.active);const j=(i+1)%bc09.order.length;if(j===0)bc09.round++;bc09.active=bc09.order[j];bc09.lapElapsed=0;bc09.lapStart=Date.now();bc09.running=true;bc09.expanded=[bc09.active];bc09Save();saveAll();render()}
+function bc09SetActive(id){bc09.active=id;bc09.lapElapsed=0;bc09.lapStart=Date.now();bc09.running=true;bc09.expanded=[id];bc09Save();render()}
+function bc09Pause(){if(bc09.running){bc09.lapElapsed=bc09Lap();bc09.running=false;bc09.lapStart=null}else{bc09.running=true;bc09.lapStart=Date.now()}bc09Save();bc09RenderInitiative()}
+function bc09Tick(now){if(bc09.running&&bc09Lap(now)>=120){bc09Advance();return}const lap=document.getElementById("bc09Lap");if(lap)lap.textContent=bc09Format(bc09Lap(now))}
+function bc09Format(v){const n=Math.floor(v);return `${String(Math.floor(n/60)).padStart(2,"0")}:${String(n%60).padStart(2,"0")}`}
+function bc09Wrap(id,type,card){const shell=document.createElement("div");shell.className="bc09-shell"+(bc09.active===id?" active":"")+(bc09.expanded.includes(id)?" open":"");const data=bc09Entries().find(x=>x.id===id);const h=document.createElement("div");h.className="bc09-summary";const title=document.createElement("strong");title.textContent=`${data?.icon||"🎲"} ${data?.name||"Combatant"}`;const meta=document.createElement("span");if(type==="player"){const t=timers.find(x=>x.id===id);meta.textContent=`AC ${t?.stats?.AC??10} · ${format(effective(t))}`;meta.dataset.bc09PlayerClock=id}else{const e=entities.find(x=>x.id===id);meta.textContent=e?.type==="Mob"?`×${Math.min(10,e.quantity||1)} · AC ${v081EffectiveAC(e)}`:e?.type||"Encounter"}h.append(title,meta);const arrow=document.createElement("span");arrow.textContent=bc09.expanded.includes(id)?"▴":"▾";h.append(arrow);h.onclick=()=>{bc09.expanded=bc09.expanded.includes(id)?bc09.expanded.filter(x=>x!==id):[...bc09.expanded,id];bc09Save();render()};const detail=document.createElement("div");detail.className="bc09-details";detail.append(card);shell.append(h,detail);return shell}
+function bc09Reorder(source,target){if(source===target)return;const a=bc09.order.indexOf(source),b=bc09.order.indexOf(target);if(a<0||b<0)return;bc09.order.splice(a,1);bc09.order.splice(b,0,source);bc09Save();bc09RenderInitiative()}
+function bc09RenderInitiative(){bc09Sync();const root=document.getElementById("bc09Initiative");if(!root)return;root.innerHTML="";const title=document.createElement("strong");title.textContent=`🎲 SHARED INITIATIVE · ROUND ${bc09.round}`;root.append(title);const hint=document.createElement("div");hint.className="sub";hint.textContent="Drag tiles into turn order. One turn per mob group. Lap automatically advances at 02:00.";root.append(hint);const list=document.createElement("div");list.className="bc09-init-list";const entries=bc09Entries();bc09.order.forEach((id,i)=>{const x=entries.find(e=>e.id===id);if(!x)return;const tile=document.createElement("div");tile.className="bc09-init-entry"+(id===bc09.active?" active":"");tile.draggable=true;tile.textContent=`${i+1}. ${x.icon} ${x.name}`;tile.title="Drag to reorder · Click to make active";tile.ondragstart=e=>{e.dataTransfer.setData("text/plain",id);e.dataTransfer.effectAllowed="move"};tile.ondragover=e=>{e.preventDefault();tile.classList.add("dragover")};tile.ondragleave=()=>tile.classList.remove("dragover");tile.ondrop=e=>{e.preventDefault();tile.classList.remove("dragover");bc09Reorder(e.dataTransfer.getData("text/plain"),id)};tile.onclick=()=>bc09SetActive(id);list.append(tile)});root.append(list);const tools=document.createElement("div");tools.className="bc09-init-tools";const lap=document.createElement("span");lap.className="bc09-lap";lap.id="bc09Lap";lap.textContent=bc09Format(bc09Lap());tools.append(lap);const limit=document.createElement("span");limit.textContent="/ 02:00";tools.append(limit);tools.append(button(bc09.running?"PAUSE LAP":"START LAP","",bc09Pause),button("END TURN →","primary",bc09Advance));root.append(tools)}
+function bc09PartyCommand(t,cmd){if(cmd==="end"&&bc09.active===t.id){bc09Advance()}else if(cmd==="start"){bc09SetActive(t.id)}else if(cmd==="hold"||cmd==="join"){/* legacy commands ignored; turn queue retired */}schedulePartyPublish(true)}
+const bc09OriginalRefresh=refreshLiveDisplays;
+refreshLiveDisplays=function(now=Date.now()){bc09OriginalRefresh(now);document.querySelectorAll("[data-bc09-player-clock]").forEach(el=>{const t=timers.find(x=>x.id===el.dataset.bc09PlayerClock);if(t)el.textContent=`AC ${t.stats?.AC??10} · ${format(effective(t,now))}`})};
 
 setInterval(()=>{const now=Date.now();gameLogicTick(now);refreshLiveDisplays(now)},200);
 setInterval(saveAll,2000);window.addEventListener("beforeunload",()=>{saveAll();v081Persist()});
