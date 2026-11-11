@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BattleClock v0.9.2.1</title>
+<title>BattleClock v0.9.2.2</title>
 <style>
 :root{--bg:#15171a;--panel:#24282d;--panel2:#1c1f23;--text:#f3f4f6;--muted:#aeb4bd;--border:#444b55;--run:#43d17a;--danger:#ff5c5c}
 *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
@@ -151,7 +151,7 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 </head>
 <body>
 <header>
-<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.9.2.1</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
+<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.9.2.2</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
 <div class="header-buttons">
 <span id="partyStatus" class="party-status" style="display:none">PARTY VIEW OFFLINE</span>
 <button id="partyConnect">CONNECT PARTY VIEW</button>
@@ -301,6 +301,21 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 <dialog id="v083DeleteDialog" class="builder"><h3>Delete saved template?</h3><p id="v083DeleteText"></p><div class="dialog-buttons"><button type="button" id="v083DeleteCancel">CANCEL</button><button type="button" class="danger" id="v083DeleteConfirm">DELETE TEMPLATE</button></div></dialog>
 <dialog id="v081NoteDialog" class="builder"><h3>DM Notepad</h3><div class="hint">DM only · Automatically saved · Included in game exports · Paste tab-separated Excel data as text</div><div id="v081NoteTabs" class="library-tabs"></div><div style="display:flex;gap:7px;margin:8px 0"><input id="v081NoteTitle" placeholder="Page name" style="flex:1"><button id="v081AddNote">+ PAGE</button><button id="v081DeleteNote">DELETE PAGE</button></div><textarea id="v081NoteBody" class="note-area" spellcheck="false"></textarea><div class="dialog-buttons"><button onclick="document.getElementById('v081NoteDialog').close()">CLOSE</button></div></dialog>
 <script>
+
+
+(()=>{
+const STORAGE_KEY="battleClock_v02", ENTITY_KEY="battleClock_entities_v02", GAME_KEY="battleClock_game_v02", EVENT_KEY="battleClock_events_v02";
+let game=loadGame(), editingId=null, renamingId=null, editingEntityId=null;
+let events=loadEvents();
+let timers=loadTimers()||[];
+// Defensive migration: legacy Player Time Pool saves may not contain a `primary` field.
+// Preserve explicitly-primary timers; otherwise treat the first four legacy timers as players.
+let explicitPrimary=timers.filter(t=>t.primary===true);
+if(explicitPrimary.length){timers=explicitPrimary.slice(0,4)}
+else{timers=timers.slice(0,4).map((t,i)=>({...t,primary:true,name:t.name||`Player ${i+1}`}))}
+while(timers.length<4)timers.push(makeTimer(`Player ${timers.length+1}`,true));
+timers=timers.map((t,i)=>({...t,primary:true,name:t.name||`Player ${i+1}`,color:t.color||"#43d17a"}));
+
 // v0.9.2: a single, tabbed editor; existing combat/time functions are unchanged.
 function bc092Kind(kind){const k=String(kind||"Action").toLowerCase();return ["item","spell","ability","attack"].includes(k)?k:"action"}
 function bc092Icon(k){return ({item:"🗡️",spell:"✨",ability:"⚡",attack:"🎯",action:"⚙️"})[k]||"⚙️"}
@@ -364,19 +379,6 @@ document.getElementById("bc092Close").onclick=()=>document.getElementById("bc092
 document.getElementById("bc092Save").onclick=bc092Save;
 
 
-
-(()=>{
-const STORAGE_KEY="battleClock_v02", ENTITY_KEY="battleClock_entities_v02", GAME_KEY="battleClock_game_v02", EVENT_KEY="battleClock_events_v02";
-let game=loadGame(), editingId=null, renamingId=null, editingEntityId=null;
-let events=loadEvents();
-let timers=loadTimers()||[];
-// Defensive migration: legacy Player Time Pool saves may not contain a `primary` field.
-// Preserve explicitly-primary timers; otherwise treat the first four legacy timers as players.
-let explicitPrimary=timers.filter(t=>t.primary===true);
-if(explicitPrimary.length){timers=explicitPrimary.slice(0,4)}
-else{timers=timers.slice(0,4).map((t,i)=>({...t,primary:true,name:t.name||`Player ${i+1}`}))}
-while(timers.length<4)timers.push(makeTimer(`Player ${timers.length+1}`,true));
-timers=timers.map((t,i)=>({...t,primary:true,name:t.name||`Player ${i+1}`,color:t.color||"#43d17a"}));
 
 let entities=loadEntities();
 const CREATURE_BANK_KEY="battleClock_creature_bank_v07";let creatureBank=loadCreatureBank();
@@ -579,7 +581,7 @@ function renderPlayerQueue(){let h=document.getElementById("v08Players");if(!h){
 function publicSnapshot(){
  const now=Date.now();
  return{
-  version:3,published_at:now,processedCommands:Object.fromEntries(processedPlayerCommands),playerQueue:timers.map(t=>({id:t.id,name:t.name,status:playerQueueStatus(t)})),mobQueue:{active:v08.mobActive,running:v08.mobRunning,order:v08.mobOrder.map(id=>{const e=entities.find(x=>x.id===id);return e?{id,name:e.name,quantity:e.quantity||1,engagedWith:e.engagedWith||"",remaining:initiativeEffective(e,now),running:!!e.initiative?.running}:null}).filter(Boolean)},
+  version:4,published_at:now,initiative:{order:bc09.order,active:bc09.active,round:bc09.round,lap:bc09Lap(now),running:bc09.running},processedCommands:Object.fromEntries(processedPlayerCommands),playerQueue:timers.map(t=>({id:t.id,name:t.name,status:playerQueueStatus(t)})),mobQueue:{active:v08.mobActive,running:v08.mobRunning,order:v08.mobOrder.map(id=>{const e=entities.find(x=>x.id===id);return e?{id,name:e.name,quantity:e.quantity||1,engagedWith:e.engagedWith||"",remaining:initiativeEffective(e,now),running:!!e.initiative?.running}:null}).filter(Boolean)},
   players:timers.map(t=>({
    id:t.id,name:t.name,color:t.color||"#43d17a",
    remaining:effective(t,now),running:!!t.running,rate:timeRate(t),turnState:t.turnState||"active",
@@ -588,7 +590,7 @@ function publicSnapshot(){
    effects:(t.effects||[]).map(x=>({name:x.name,mode:x.mode,amount:Number(x.amount)||0,remainingDuration:Number(x.remainingDuration??x.duration)||0}))
   })),
   entities:entities.filter(e=>e.visible!==false).map(e=>({
-   id:e.id,name:e.name,type:e.type,quantity:Math.max(1,Number(e.quantity)||1),mobHP:e.type==="Mob"?[]:(Array.isArray(e.mobHP)?e.mobHP:[]),mobHPMax:e.type==="Mob"?0:(Number(e.mobHPMax)||0),engagedWith:e.engagedWith||"",initiative:e.initiative?{interval:e.initiative.interval,remaining:initiativeEffective(e,now),running:e.initiative.running}:null,
+   id:e.id,name:e.name,type:e.type,quantity:Math.max(1,Number(e.quantity)||1),mobHP:Array.isArray(e.mobHP)?e.mobHP:[],mobHPMax:Number(e.mobHPMax)||0,engagedWith:e.engagedWith||"",initiative:e.initiative?{interval:e.initiative.interval,remaining:initiativeEffective(e,now),running:e.initiative.running}:null,
    components:(e.components||[]).map(c=>({
     id:c.id,name:c.name,kind:c.kind,
     value:c.kind==="timer"?compEffective(c,now):c.value,
