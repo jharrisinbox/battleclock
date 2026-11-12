@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BattleClock v0.9.6</title>
+<title>BattleClock v0.9.7</title>
 <style>
 :root{--bg:#15171a;--panel:#24282d;--panel2:#1c1f23;--text:#f3f4f6;--muted:#aeb4bd;--border:#444b55;--run:#43d17a;--danger:#ff5c5c}
 *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
@@ -151,7 +151,7 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 </head>
 <body>
 <header>
-<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.9.6</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
+<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.9.7</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
 <div class="header-buttons">
 <span id="partyStatus" class="party-status" style="display:none">PARTY VIEW OFFLINE</span>
 <button id="partyConnect">CONNECT PARTY VIEW</button>
@@ -580,7 +580,7 @@ function renderInitiativeQueue(){syncMobOrder();let h=document.getElementById("v
 function renderPlayerQueue(){let h=document.getElementById("v08Players");if(!h){h=document.createElement("section");h.id="v08Players";h.className="v08-panel";document.getElementById("players").before(h)}h.innerHTML="";const hd=document.createElement("div");hd.className="v08-head";hd.innerHTML="<strong>PLAYER TURN QUEUE</strong>";h.append(hd);timers.forEach(t=>{const r=document.createElement("div");r.className="v08-line";const nm=document.createElement("span");nm.textContent=t.name;const st=document.createElement("b");st.textContent=playerQueueStatus(t);r.append(nm,st,button("START","",()=>v08PlayerCommand(t,"start")),button("QUEUE","",()=>v08PlayerCommand(t,"join")),button("HOLD","",()=>v08PlayerCommand(t,"hold")));h.append(r)})}
 
 
-// Tactical whiteboard v0.9.6: isolated 256x256 logical coordinate map.
+// Tactical whiteboard v0.9.7: isolated 256x256 logical coordinate map.
 const BC_MAP_KEY="battleclock_tactical_map_v1";
 function bcMapSanitize(data){
  const d=data&&typeof data==="object"?data:{};
@@ -611,19 +611,20 @@ function bcMapInit(){
  <input id="bcMapText" placeholder="Label / emoji" value="📍" maxlength="100" aria-label="Marker label">
  <label>Colour <input id="bcMapColor" type="color" value="#55b6e8"></label>
  <label>Size <input id="bcMapSize" type="number" min="2" max="128" value="12" style="width:65px"></label>
- <button id="bcMapDelete">DELETE SELECTED</button><button id="bcMapClear">CLEAR MAP</button></div>
+ <button id="bcMapUpdate">UPDATE SELECTED</button><button id="bcMapDelete">DELETE SELECTED</button><button id="bcMapClear">CLEAR MAP</button></div>
  <svg id="bcMapSvg" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" aria-label="Editable tactical map"></svg>
  <div class="sub" id="bcMapCoords">Select a tool to add objects. Select mode to reposition.</div>`;
  document.querySelector("main").prepend(panel);
  document.getElementById("bcMapTool").onchange=e=>{bcMapMode=e.target.value;bcMapSelected=null;bcMapDraw()};
+ document.getElementById("bcMapUpdate").onclick=()=>{const o=bcMap.objects.find(x=>x.id===bcMapSelected);if(!o)return;o.text=document.getElementById("bcMapText").value;o.color=document.getElementById("bcMapColor").value;o.size=Math.max(2,Math.min(128,Number(document.getElementById("bcMapSize").value)||12));bcMapSave();bcMapDraw()};
  document.getElementById("bcMapDelete").onclick=()=>{if(bcMapSelected){bcMap.objects=bcMap.objects.filter(o=>o.id!==bcMapSelected);bcMapSelected=null;bcMapSave();bcMapDraw()}};
  document.getElementById("bcMapClear").onclick=()=>{if(confirm("Clear all tactical map objects?")){bcMap.objects=[];bcMapSelected=null;bcMapSave();bcMapDraw()}};
  const svg=document.getElementById("bcMapSvg");
  let dragging=false;
- function coords(ev){const r=svg.getBoundingClientRect();return{x:Math.max(0,Math.min(255,(ev.clientX-r.left)/r.width*256)),y:Math.max(0,Math.min(255,(ev.clientY-r.top)/r.height*256))}}
+ function coords(ev){const pt=svg.createSVGPoint();pt.x=ev.clientX;pt.y=ev.clientY;const matrix=svg.getScreenCTM();if(!matrix)return{x:0,y:0};const p=pt.matrixTransform(matrix.inverse());return{x:Math.max(0,Math.min(255,p.x)),y:Math.max(0,Math.min(255,p.y))}}
  svg.addEventListener("pointerdown",ev=>{
   const point=coords(ev),target=ev.target.closest("[data-map-id]"),id=target?.getAttribute("data-map-id");
-  if(id){bcMapSelected=id;dragging=true;svg.setPointerCapture(ev.pointerId);bcMapDraw();return}
+  if(id){bcMapSelected=id;const selected=bcMap.objects.find(x=>x.id===id);if(selected){document.getElementById("bcMapText").value=selected.text;document.getElementById("bcMapColor").value=selected.color;document.getElementById("bcMapSize").value=selected.size}dragging=true;svg.setPointerCapture(ev.pointerId);bcMapDraw();return}
   if(bcMapMode==="select")return;
   const o={id:uid(),kind:bcMapMode,x:Math.round(point.x),y:Math.round(point.y),
    text:document.getElementById("bcMapText").value||"📍",
@@ -647,6 +648,7 @@ function bcMapDraw(){
   if(o.kind==="rect")add(g,"rect",{x:o.x,y:o.y,width:o.size,height:o.size,fill:o.color,opacity:".65",stroke:sel?"white":"none","stroke-width":1.5});
   else if(o.kind==="circle")add(g,"circle",{cx:o.x,cy:o.y,r:o.size/2,fill:o.color,opacity:".7",stroke:sel?"white":"none","stroke-width":1.5});
   else {
+   if(o.kind==="text"||o.kind==="icon")add(g,"rect",{x:o.x-Math.max(8,o.text.length*o.size*.32),y:o.y-o.size*.7,width:Math.max(16,o.text.length*o.size*.64),height:o.size*1.4,fill:"transparent","pointer-events":"all"});
    if(o.kind==="pin")add(g,"circle",{cx:o.x,cy:o.y,r:Math.max(4,o.size/2),fill:o.color,stroke:sel?"white":"#101820","stroke-width":sel?1.5:.7});
    const t=add(g,"text",{x:o.x,y:o.y+(o.kind==="pin"?2:0),fill:o.kind==="pin"?"#ffffff":o.color,
      "font-size":o.kind==="text"?o.size:Math.max(6,o.size),"font-weight":"bold","text-anchor":"middle","dominant-baseline":"middle","pointer-events":"none"});
@@ -662,7 +664,7 @@ function publicSnapshot(){
   version:4,published_at:now,initiative:{order:bc09.order,active:bc09.active,round:bc09.round,lap:bc09Lap(now),running:bc09.running},processedCommands:Object.fromEntries(processedPlayerCommands),playerQueue:timers.map(t=>({id:t.id,name:t.name,status:playerQueueStatus(t)})),mobQueue:{active:v08.mobActive,running:v08.mobRunning,order:v08.mobOrder.map(id=>{const e=entities.find(x=>x.id===id);return e?{id,name:e.name,quantity:e.quantity||1,engagedWith:e.engagedWith||"",remaining:initiativeEffective(e,now),running:!!e.initiative?.running}:null}).filter(Boolean)},
   players:timers.map(t=>({
    id:t.id,name:t.name,color:t.color||"#43d17a",
-   remaining:effective(t,now),running:!!t.running,rate:timeRate(t),turnState:t.turnState||"active",
+   remaining:effective(t,now),running:!!t.running,activityRunning:bc097Active(t),rate:timeRate(t),turnState:t.turnState||"active",
    cooldowns:(t.playerActions||[]).filter(a=>Number(a.cooldown)>0).map(a=>({name:a.name,remaining:Number(a.cooldownRemaining)||0})),
    actions:(t.playerActions||[]).map(a=>({id:a.id,kind:a.kind,name:a.name,reference:a.reference,description:a.description,hitDice:a.hitDice||a.rollDice||"",attackModifier:Number(a.attackModifier??a.attackMod)||0,damageDice:a.damageDice||"",damageModifier:Number(a.damageModifier)||0,saveAbility:a.saveAbility||"",saveDC:a.saveDC??"",duration:Number(a.duration)||0,timeCost:Number(a.timeCost)||0,cooldown:Number(a.cooldown)||0,cooldownRemaining:Number(a.cooldownRemaining)||0,maxUses:a.maxUses,currentUses:a.currentUses})),
    effects:(t.effects||[]).map(x=>({name:x.name,mode:x.mode,amount:Number(x.amount)||0,remainingDuration:Number(x.remainingDuration??x.duration)||0}))
@@ -703,26 +705,24 @@ async function restorePartySession(){
 
 
 function uid(){return (globalThis.crypto&&crypto.randomUUID)?crypto.randomUUID():String(Date.now()+Math.random())}
-function makeTimer(name,primary=false){return{id:uid(),name,primary,color:"#43d17a",remaining:game.defaultSeconds,running:false,startedAt:null,startRemaining:null,zeroNotified:false,turnState:"active",playerActions:[],stats:{STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},effects:[]}}
-function effectApplies(t,x){const c=x.condition||"always";return c==="always"||c===(t.turnState||"active")}
-function timeRate(t){
- // Rate modifiers are conditional: passive effects only apply off-turn.
- const inCombat=bc09.running||bc09.lapElapsed>0||bc09.round>1;
- const state=inCombat?(bc09.active===t.id?"active":"passive"):(t.turnState||"active");
- const base=state==="passive"?0.10:1;
- return Math.max(0,(t.effects||[]).filter(x=>x.mode==="rate"&&((x.condition||"always")==="always"||(x.condition||"always")===state))
-   .reduce((v,x)=>v+(Number(x.amount)||0),base));
-}
+function makeTimer(name,primary=false){return{id:uid(),name,primary,color:"#43d17a",remaining:game.defaultSeconds,running:false,startedAt:null,startRemaining:null,zeroNotified:false,turnState:"active",activityRunning:false,playerActions:[],stats:{STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},effects:[]}}
+// v0.9.7: activity is independent from persistent rate effects and initiative.
+function bc097Active(t){return t.activityRunning!==undefined?!!t.activityRunning:!!t.running}
+function effectApplies(t,x){const c=x.condition||"always";return c==="always"||c===(bc09.active===t.id?"active":"passive")}
+function bc097Modifier(t){return (t.effects||[]).filter(x=>x.mode==="rate"&&effectApplies(t,x)).reduce((sum,x)=>sum+(Number(x.amount)||0),0)}
+function timeRate(t){return Math.max(0,(bc097Active(t)?1:0)+bc097Modifier(t))}
+function bc097Rebase(t){if(t.running)freeze(t);const rate=timeRate(t);if(playersRunning&&rate>0&&t.remaining>0){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining}}
+function bc097SetActivity(t,on){if(t.running)freeze(t);t.activityRunning=!!on;bc097Rebase(t);logEvent(`${t.name}: activity ${on?"START":"PAUSE"}`);saveAll();render();schedulePartyPublish(true)}
 function toggleTurnState(t,state=null){
  const was=t.running;if(was)freeze(t);t.turnState=state||(t.turnState==="active"?"passive":"active");
- if(was&&t.remaining>0&&playersRunning){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining}
+ bc097Rebase(t)
  logEvent(`${t.name}: ${t.turnState.toUpperCase()} state`);saveAll();render()
 }
 function effective(t,now=Date.now()){if(!t.running)return Math.max(0,t.remaining);return Math.max(0,t.startRemaining-((now-t.startedAt)/1000)*timeRate(t))}
 function freeze(t){t.remaining=effective(t);t.running=false;t.startedAt=null;t.startRemaining=null}
-function toggle(t){if(t.running){freeze(t);logEvent(`${t.name} stopped at ${format(t.remaining)}`)}else if(t.remaining>0&&playersRunning){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining;logEvent(`${t.name} started at ${format(t.remaining)}`)}saveAll();render()}
+function toggle(t){bc097SetActivity(t,!bc097Active(t))}
 function adjust(t,seconds){const next=Math.max(0,effective(t)+seconds);t.remaining=next;if(t.running&&next>0){t.startedAt=Date.now();t.startRemaining=next}else if(next<=0){freeze(t);t.remaining=0}saveAll();logEvent(`${t.name} ${seconds>0?"+":""}${seconds}s → ${format(next)}`);if(next===0)notifyZero(t);render()}
-function reset(t){if(!confirm(`Reset ${t.name} to ${format(game.defaultSeconds)}?`))return;t.remaining=game.defaultSeconds;t.running=false;t.startedAt=null;t.startRemaining=null;t.zeroNotified=false;logEvent(`${t.name} reset to ${format(game.defaultSeconds)}`);saveAll();render()}
+function reset(t){if(!confirm(`Reset ${t.name} to ${format(game.defaultSeconds)}?`))return;t.remaining=game.defaultSeconds;t.running=false;t.startedAt=null;t.startRemaining=null;t.activityRunning=false;t.zeroNotified=false;logEvent(`${t.name} reset to ${format(game.defaultSeconds)}`);saveAll();render()}
 function setTime(t,seconds){t.remaining=Math.max(0,seconds);t.running=false;t.startedAt=null;t.startRemaining=null;t.zeroNotified=false;logEvent(`${t.name} set to ${format(seconds)}`);saveAll();render()}
 function format(sec){sec=Math.max(0,Math.floor(Number(sec)||0));return `${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`}
 function parseTime(v){const p=String(v||"").trim().split(":");if(p.length===2)return Math.max(0,(Number(p[0])||0)*60+(Number(p[1])||0));return Math.max(0,Number(v)||0)}
@@ -734,7 +734,7 @@ function timerCard(t){
  const head=document.createElement("div");head.className="timer-head";const identity=document.createElement("div");identity.className="identity";
  const color=document.createElement("input");color.type="color";color.className="color-picker";color.value=t.color||"#43d17a";color.addEventListener("input",()=>{t.color=color.value;saveAll();render()});
  const name=document.createElement("div");name.className="name";name.textContent=t.name;const rn=button("RENAME","",()=>openRename(t));rn.style.cssText="padding:7px 9px;font-size:11px";identity.append(color,name,rn);
- const status=document.createElement("div");status.className="status";status.textContent=sec===0?"OUT OF TIME":(t.running?"● RUNNING":"STOPPED");if(t.running)status.style.color=t.color;head.append(identity,status);
+ const status=document.createElement("div");status.className="status";status.textContent=sec===0?"OUT OF TIME":(bc097Active(t)?"● ACTIVE":t.running?"● EFFECTS":"STOPPED");if(t.running)status.style.color=t.color;head.append(identity,status);
  const statWrap=document.createElement("div");statWrap.className="ability-strip";
  const stats=Object.assign({STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},t.stats||{});
  ["STR","DEX","CON","INT","WIS","CHA"].forEach(k=>{const z=document.createElement("div");z.className="ability";const base=Number(stats[k])||0,mod=Math.floor((base-10)/2),bonus=Number(stats["bonus"+k])||0;z.innerHTML=`<b>${k}</b><span><span class="stat-base">${base}</span><span class="stat-mod">${mod>=0?"+":""}${mod}</span>${bonus?`<span class="stat-temp">${bonus>0?"+":""}${bonus}</span>`:""}</span>`;statWrap.append(z)});
@@ -744,9 +744,9 @@ function timerCard(t){
  const clock=document.createElement("div");clock.className="clock";clock.textContent=format(sec);clock.title="Click to start or stop";clock.onclick=()=>toggle(t);
  const controls=document.createElement("div");controls.className="controls";
  [-30,-10,-5].forEach(x=>controls.append(button(`−${Math.abs(x)}`,"adjust",()=>adjust(t,x))));
- controls.append(button(t.running?"STOP":"START","toggle",()=>toggle(t)));
+ controls.append(button(bc097Active(t)?"PAUSE ACTIVITY":"START ACTIVITY","toggle",()=>toggle(t)));
  [5,10,30].forEach(x=>controls.append(button(`+${x}`,"adjust",()=>adjust(t,x))));
- const effectsLine=document.createElement("div");effectsLine.className="effects-line";const rate=timeRate(t);if(rate!==1){const b=document.createElement("span");b.className="effect-badge";b.textContent=`⏱ ${rate.toFixed(2)}×`;effectsLine.append(b)}(t.effects||[]).forEach(x=>{const b=document.createElement("span");b.className="effect-badge";b.textContent=`${x.name}${x.duration>0?` ${format(x.remainingDuration??x.duration)}`:""}`;effectsLine.append(b)});
+ const effectsLine=document.createElement("div");effectsLine.className="effects-line";const rate=timeRate(t);if(rate!==0){const b=document.createElement("span");b.className="effect-badge";b.textContent=`⏱ ${rate.toFixed(2)}×`;effectsLine.append(b)}(t.effects||[]).forEach(x=>{const b=document.createElement("span");b.className="effect-badge";b.textContent=`${x.name}${x.duration>0?` ${format(x.remainingDuration??x.duration)}`:""}`;effectsLine.append(b)});
  const secondary=document.createElement("div");secondary.className="secondary";secondary.append(button("SET TIME","",()=>openSetTime(t)),button("EFFECTS","",()=>openEffects(t)));
  const pa=document.createElement("div");pa.className="player-actions";const ph=document.createElement("div");ph.className="player-actions-head";ph.innerHTML="<strong>ACTIONS / SPELLS / ITEMS</strong>";ph.append(button("EDIT PLAYER","",()=>window.bc092Open(t,"Items")));pa.append(ph);if((t.playerActions||[]).length){const pl=document.createElement("div");pl.className="player-action-list";t.playerActions.forEach(a=>pl.append(playerActionView(t,a)));pa.append(pl)}card.append(head,statWrap,statEdit,turn,clock,effectsLine,controls,secondary,pa);return card
 }
@@ -948,7 +948,7 @@ function saveAll(){saveTimeline();saveV08();
  const ec=entities.map(e=>({...e,components:(e.components||[]).map(c=>c.kind==="timer"&&c.running?{...c,value:compEffective(c,now)}:{...c})}));localStorage.setItem(ENTITY_KEY,JSON.stringify(ec));
  schedulePartyPublish();
 }
-function loadTimers(){try{let raw=localStorage.getItem(STORAGE_KEY)||localStorage.getItem("battleClock_v01")||localStorage.getItem("playerTimePool_v2");if(!raw)return null;return JSON.parse(raw).map(t=>({...t,primary:!!t.primary,color:t.color||"#43d17a",running:false,startedAt:null,startRemaining:null,turnState:t.turnState||"active",playerActions:Array.isArray(t.playerActions)?t.playerActions.map(a=>({...a,cooldown:Number(a.cooldown)||0,cooldownRemaining:Number(a.cooldownRemaining)||0,maxUses:a.maxUses!==undefined?a.maxUses:(a.uses??""),currentUses:a.currentUses!==undefined?a.currentUses:(a.maxUses!==undefined?a.maxUses:(a.uses??"")),description:a.description||""})):[],stats:Object.assign({STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},t.stats||{}),effects:Array.isArray(t.effects)?t.effects.map(x=>({...x,remainingDuration:Number(x.remainingDuration??x.duration)||0,pulseElapsed:Number(x.pulseElapsed)||0})):[]}))}catch(e){return null}}
+function loadTimers(){try{let raw=localStorage.getItem(STORAGE_KEY)||localStorage.getItem("battleClock_v01")||localStorage.getItem("playerTimePool_v2");if(!raw)return null;return JSON.parse(raw).map(t=>({...t,primary:!!t.primary,color:t.color||"#43d17a",running:false,startedAt:null,startRemaining:null,turnState:t.turnState||"active",activityRunning:!!(t.activityRunning??t.running),playerActions:Array.isArray(t.playerActions)?t.playerActions.map(a=>({...a,cooldown:Number(a.cooldown)||0,cooldownRemaining:Number(a.cooldownRemaining)||0,maxUses:a.maxUses!==undefined?a.maxUses:(a.uses??""),currentUses:a.currentUses!==undefined?a.currentUses:(a.maxUses!==undefined?a.maxUses:(a.uses??"")),description:a.description||""})):[],stats:Object.assign({STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},t.stats||{}),effects:Array.isArray(t.effects)?t.effects.map(x=>({...x,remainingDuration:Number(x.remainingDuration??x.duration)||0,pulseElapsed:Number(x.pulseElapsed)||0})):[]}))}catch(e){return null}}
 function loadEntities(){try{return (JSON.parse(localStorage.getItem(ENTITY_KEY)||"[]")||[]).map(e=>({...e,visible:e.visible!==false,quantity:Math.max(1,Number(e.quantity)||1),effects:Array.isArray(e.effects)?e.effects:[],mobHP:Array.isArray(e.mobHP)?e.mobHP:[],selectedMob:Number(e.selectedMob)||0,mobHPMax:Number(e.mobHPMax)||0,initiative:e.initiative?{...e.initiative,running:false,startedAt:null,startRemaining:null}:null,components:(e.components||[]).map(c=>({...c,running:false,startedAt:null,startValue:null}))}))}catch(e){return[]}}
 function loadGame(){try{return Object.assign({defaultSeconds:20*60},JSON.parse(localStorage.getItem(GAME_KEY)||localStorage.getItem("battleClock_game_v01")||"{}"))}catch(e){return{defaultSeconds:20*60}}}
 function saveGame(){localStorage.setItem(GAME_KEY,JSON.stringify(game))}
@@ -1074,7 +1074,7 @@ document.getElementById("addEntityPulse").onclick=()=>addEntityEffectRow({id:uid
 document.getElementById("entityEffectsForm").addEventListener("submit",ev=>{if(ev.submitter?.value==="cancel")return;ev.preventDefault();const ent=entities.find(x=>x.id===editingEffectsEntityId);if(ent){ent.effects=(ent.effects||[]).filter(x=>!["rate","pulse"].includes(x.mode));document.querySelectorAll("#entityEffectsBuilder .effect-row").forEach(r=>{const duration=Math.max(0,Number(r.querySelector(".fx-duration").value)||0);ent.effects.push({id:r.dataset.id,name:r.querySelector(".fx-name").value.trim()||"Effect",mode:r.dataset.mode,amount:Number(r.querySelector(".fx-amount").value)||0,condition:r.querySelector(".fx-condition")?.value||"always",interval:Math.max(1,Number(r.querySelector(".fx-interval").value)||10),duration,remainingDuration:duration,pulseElapsed:0})});logEvent(`${ent.name}: timed effects updated`);saveAll();render()}document.getElementById("entityEffectsDialog").close()});
 document.getElementById("addRateEffect").onclick=()=>addEffectRow({id:uid(),name:"Active Rate",mode:"rate",amount:.10,condition:"always",interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
 document.getElementById("addPulseEffect").onclick=()=>addEffectRow({id:uid(),name:"Burning",mode:"pulse",amount:-5,condition:"always",interval:10,duration:0,remainingDuration:0,pulseElapsed:0});
-document.getElementById("effectsForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingEffectsPlayerId);if(t){const was=t.running;if(was)freeze(t);const oldEffects=t.effects||[];t.effects=oldEffects.filter(x=>!["rate","pulse"].includes(x.mode));document.querySelectorAll("#effectsBuilder .effect-row").forEach(r=>{const duration=Math.max(0,Number(r.querySelector(".fx-duration").value)||0),prev=(t.effects||[]).find(x=>x.id===r.dataset.id);t.effects.push({id:r.dataset.id,name:r.querySelector(".fx-name").value.trim()||"Effect",mode:r.dataset.mode,amount:Number(r.querySelector(".fx-amount").value)||0,condition:r.querySelector(".fx-condition")?.value||"always",interval:Math.max(1,Number(r.querySelector(".fx-interval").value)||10),duration,remainingDuration:prev&&Number(prev.duration)===duration?Number(prev.remainingDuration??duration):duration,pulseElapsed:Number(prev?.pulseElapsed)||0})});if(was&&t.remaining>0){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining}logEvent(`${t.name}: timed effects updated`);saveAll();render()}document.getElementById("effectsDialog").close()});
+document.getElementById("effectsForm").addEventListener("submit",e=>{if(e.submitter?.value==="cancel")return;e.preventDefault();const t=timers.find(x=>x.id===editingEffectsPlayerId);if(t){const was=t.running;if(was)freeze(t);const oldEffects=t.effects||[];t.effects=oldEffects.filter(x=>!["rate","pulse"].includes(x.mode));document.querySelectorAll("#effectsBuilder .effect-row").forEach(r=>{const duration=Math.max(0,Number(r.querySelector(".fx-duration").value)||0),prev=(t.effects||[]).find(x=>x.id===r.dataset.id);t.effects.push({id:r.dataset.id,name:r.querySelector(".fx-name").value.trim()||"Effect",mode:r.dataset.mode,amount:Number(r.querySelector(".fx-amount").value)||0,condition:r.querySelector(".fx-condition")?.value||"always",interval:Math.max(1,Number(r.querySelector(".fx-interval").value)||10),duration,remainingDuration:prev&&Number(prev.duration)===duration?Number(prev.remainingDuration??duration):duration,pulseElapsed:Number(prev?.pulseElapsed)||0})});bc097Rebase(t);logEvent(`${t.name}: timed effects updated`);saveAll();render()}document.getElementById("effectsDialog").close()});
 function savePlayerActions331(){const t=timers.find(x=>x.id===editingPlayerId);if(!t)return;const oldActions=t.playerActions||[];t.playerActions=[];document.querySelectorAll("#playerActionBuilder .action-row").forEach(r=>{const maxRaw=r.querySelector(".ppa-max").value,currentRaw=r.querySelector(".ppa-current").value,maxUses=maxRaw===""?"":Math.max(0,Number(maxRaw)||0),currentUses=maxUses===""?"":Math.min(maxUses,Math.max(0,currentRaw===""?maxUses:(Number(currentRaw)||0)));t.playerActions.push({id:r.dataset.id,kind:r.querySelector(".ppa-kind").value,name:r.querySelector(".ppa-name").value.trim()||"Action",reference:r.querySelector(".ppa-ref").value.trim(),hitDice:r.querySelector(".ppa-hit").value.trim(),rollDice:r.querySelector(".ppa-hit").value.trim(),attackModifier:Number(r.querySelector(".ppa-hitmod").value)||0,damageDice:r.querySelector(".ppa-damage").value.trim(),damageModifier:Number(r.querySelector(".ppa-damagemod").value)||0,saveAbility:r.querySelector(".ppa-save").value.trim().toUpperCase(),saveDC:r.querySelector(".ppa-dc").value===""?"":Number(r.querySelector(".ppa-dc").value)||0,duration:Number(r.querySelector(".ppa-duration").value)||0,description:r.querySelector(".ppa-desc").value.trim(),timeCost:Math.max(0,Number(r.querySelector(".ppa-time").value)||0),cooldown:Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),cooldownRemaining:Math.min(Math.max(0,Number(r.querySelector(".ppa-cooldown").value)||0),Math.max(0,Number(oldActions.find(a=>a.id===r.dataset.id)?.cooldownRemaining)||0)),maxUses,currentUses})});logEvent(`${t.name}: actions updated`);saveAll();render();document.getElementById("playerActionDialog").close()}
 document.getElementById("savePlayerActions331").onclick=savePlayerActions331;
 document.getElementById("addPlayerActionRow").onclick=()=>addPlayerActionRow();
@@ -1120,7 +1120,7 @@ function gameLogicTick(now=Date.now()){
      if(x.duration>0){x.remainingDuration=Math.max(0,(Number(x.remainingDuration)||0)-dt);if(x.remainingDuration<=0){expired.push(x.id);return}}
      if(x.mode==="pulse"){x.pulseElapsed=(Number(x.pulseElapsed)||0)+dt;if(x.pulseElapsed>=Math.max(1,Number(x.interval)||1)){x.pulseElapsed=0;pulseDelta+=Number(x.amount)||0;logEvent(`${t.name}: ${x.name} pulse ${Number(x.amount)>0?"+":""}${Number(x.amount)||0}s`)}}
    });
-   if(expired.length){const cur=effective(t,now);t.remaining=cur;t.startedAt=now;t.startRemaining=cur;t.effects=(t.effects||[]).filter(x=>!expired.includes(x.id));rerender=true}
+   if(expired.length){const cur=effective(t,now);t.remaining=cur;t.startedAt=now;t.startRemaining=cur;t.effects=(t.effects||[]).filter(x=>!expired.includes(x.id));bc097Rebase(t);rerender=true}
    if(pulseDelta){const cur=Math.max(0,effective(t,now)+pulseDelta);t.remaining=cur;t.startedAt=now;t.startRemaining=cur;if(cur<=0){freeze(t);notifyZero(t)}rerender=true}
    if(effective(t,now)<=0){t.remaining=0;freeze(t);notifyZero(t);rerender=true}
  });
@@ -1148,7 +1148,7 @@ function bc09SetActive(id){timers.forEach(t=>{if(t.running){freeze(t);t.running=
 function bc09Pause(){
  if(bc09.running){bc09Freeze(false)}else{
   const player=bc09ActivePlayer();
-  if(player&&!player.running){toast("Start the active player's clock before resuming initiative");return}
+  if(player&&!bc097Active(player)){toast("Start the active player's activity clock before resuming initiative");return}
   bc09.running=true;bc09.autoPaused=false;bc09.lapStart=Date.now();bc09Save();
  }
  bc09RenderInitiative();schedulePartyPublish(true)
@@ -1163,7 +1163,7 @@ function bc09UpdateLap(now=Date.now()){
 function bc09Tick(now){
  // A player stopping their clock freezes the lap without resetting the elapsed danger level.
  const player=bc09ActivePlayer();
- if(bc09.running&&player&&!player.running){bc09Freeze(true);bc09RenderInitiative();schedulePartyPublish(true);return}
+ if(bc09.running&&player&&!bc097Active(player)){bc09Freeze(true);bc09RenderInitiative();schedulePartyPublish(true);return}
  if(bc09.running&&bc09Lap(now)>=120){bc09Advance();return}
  bc09UpdateLap(now)
 }
@@ -1181,7 +1181,7 @@ function bc09RenderInitiative(){bc09Sync();const root=document.getElementById("b
  const progress=document.createElement("div");progress.id="bc095LapProgress";bar.append(progress);root.append(bar);
  if(bc09.autoPaused){const msg=document.createElement("div");msg.className="sub";msg.textContent="AUTO-PAUSED: active player's clock stopped";root.append(msg)}
  bc09UpdateLap();}
-function bc09PartyCommand(t,cmd){if(cmd==="lap-toggle"){bc09Pause()}else if(cmd==="normal-toggle"){setPlayersRunning(!playersRunning)}else if(cmd==="hold"||cmd==="join"){/* legacy commands ignored */}schedulePartyPublish(true)}
+function bc09PartyCommand(t,cmd){if(cmd==="lap-toggle"){bc09Pause()}else if(cmd==="activity-toggle"){bc097SetActivity(t,!bc097Active(t))}else if(cmd==="hold"||cmd==="join"){/* legacy commands ignored */}schedulePartyPublish(true)}
 const bc09OriginalRefresh=refreshLiveDisplays;
 refreshLiveDisplays=function(now=Date.now()){bc09OriginalRefresh(now);document.querySelectorAll("[data-bc09-player-clock]").forEach(el=>{const t=timers.find(x=>x.id===el.dataset.bc09PlayerClock);if(t)el.textContent=`AC ${t.stats?.AC??10} · ${format(effective(t,now))}`})};
 
