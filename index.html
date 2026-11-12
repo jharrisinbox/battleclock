@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BattleClock v0.9.5</title>
+<title>BattleClock v0.9.6</title>
 <style>
 :root{--bg:#15171a;--panel:#24282d;--panel2:#1c1f23;--text:#f3f4f6;--muted:#aeb4bd;--border:#444b55;--run:#43d17a;--danger:#ff5c5c}
 *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
@@ -151,7 +151,7 @@ dialog input[type=text],dialog input[type=url],dialog input[type=number]{width:1
 </head>
 <body>
 <header>
-<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.9.5</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
+<div><h1>BattleClock <span style="font-size:12px;color:#aeb4bd">v0.9.6</span></h1><div class="sub">Continuous-time tabletop dashboard. Time is health, mana, action and narrative cost.</div></div>
 <div class="header-buttons">
 <span id="partyStatus" class="party-status" style="display:none">PARTY VIEW OFFLINE</span>
 <button id="partyConnect">CONNECT PARTY VIEW</button>
@@ -565,7 +565,7 @@ function v08PlayerCommand(t,type){
  v08.waiting=v08.waiting.filter(id=>id!==t.id);
  if(type==="join"){v08.waiting.push(t.id);if(t.running)freeze(t);t.turnState="passive"}
  if(type==="hold"){if(t.running)freeze(t);t.turnState="passive"}
- if(type==="start"){for(const other of timers){if(other!==t&&other.turnState==="active"){other.turnState="passive"}}t.turnState="active";if(!t.running&&t.remaining>0&&playersRunning){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining}}
+ if(type==="start"){for(const other of timers){if(other!==t&&other.turnState==="active"){if(other.running)freeze(other);other.turnState="passive";if(other.remaining>0&&playersRunning){other.running=true;other.startedAt=Date.now();other.startRemaining=other.remaining}}}if(t.running)freeze(t);t.turnState="active";if(!t.running&&t.remaining>0&&playersRunning){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining}}
  if(type==="end"){if(t.running)freeze(t);t.turnState="passive"}
  logEvent(`${t.name}: ${type.toUpperCase()}`);saveV08();saveAll();render();schedulePartyPublish(true)
 }
@@ -579,6 +579,83 @@ function mobMove(id,delta){syncMobOrder();const i=v08.mobOrder.indexOf(id),j=i+d
 function renderInitiativeQueue(){syncMobOrder();let h=document.getElementById("v08Initiative");if(!h){h=document.createElement("section");h.id="v08Initiative";h.className="v08-panel";document.getElementById("entities").before(h)}h.innerHTML="";const head=document.createElement("div");head.className="v08-head";head.innerHTML="<strong>GLOBAL MOB INITIATIVE</strong>";head.append(button(v08.mobRunning?"PAUSE QUEUE":"START QUEUE","primary",mobQueueToggle),button("NEXT MOB","",mobAdvance));const leak=document.createElement("label");leak.className="v081-leak";leak.textContent=`WAITING TIME LEAK ${v08.leak??10}%`;const slider=document.createElement("input");slider.type="range";slider.min=0;slider.max=100;slider.step=5;slider.value=v08.leak??10;slider.oninput=()=>{v08.leak=Number(slider.value);leak.firstChild.textContent=`WAITING TIME LEAK ${v08.leak}%`;saveV08();schedulePartyPublish(true)};leak.append(slider);head.append(leak);h.append(head);v08.mobOrder.forEach((id,i)=>{const e=entities.find(x=>x.id===id);if(!e)return;const r=document.createElement("div");r.className="v08-line"+(id===v08.mobActive?" v08-current":"");const info=document.createElement("span");info.textContent=`${i+1}. ${e.name} ×${e.quantity||1} · ${e.engagedWith||"—"}`;const cl=document.createElement("b");cl.dataset.v08Mob=id;cl.textContent=format(initiativeEffective(e));const engaged=document.createElement("input");engaged.className="v081-engaged";engaged.placeholder="Engaged with...";engaged.value=e.engagedWith||"";engaged.onchange=()=>{e.engagedWith=engaged.value;saveAll();schedulePartyPublish(true)};r.append(info,engaged,cl,button("↑","",()=>mobMove(id,-1)),button("↓","",()=>mobMove(id,1)));h.append(r)})}
 function renderPlayerQueue(){let h=document.getElementById("v08Players");if(!h){h=document.createElement("section");h.id="v08Players";h.className="v08-panel";document.getElementById("players").before(h)}h.innerHTML="";const hd=document.createElement("div");hd.className="v08-head";hd.innerHTML="<strong>PLAYER TURN QUEUE</strong>";h.append(hd);timers.forEach(t=>{const r=document.createElement("div");r.className="v08-line";const nm=document.createElement("span");nm.textContent=t.name;const st=document.createElement("b");st.textContent=playerQueueStatus(t);r.append(nm,st,button("START","",()=>v08PlayerCommand(t,"start")),button("QUEUE","",()=>v08PlayerCommand(t,"join")),button("HOLD","",()=>v08PlayerCommand(t,"hold")));h.append(r)})}
 
+
+// Tactical whiteboard v0.9.6: isolated 256x256 logical coordinate map.
+const BC_MAP_KEY="battleclock_tactical_map_v1";
+function bcMapSanitize(data){
+ const d=data&&typeof data==="object"?data:{};
+ return {background:typeof d.background==="string"&&/^#[0-9a-fA-F]{6}$/.test(d.background)?d.background:"#202c35",
+   objects:(Array.isArray(d.objects)?d.objects:[]).slice(0,400).map(o=>({
+    id:String(o.id||uid()),kind:["pin","text","icon","rect","circle"].includes(o.kind)?o.kind:"pin",
+    x:Math.max(0,Math.min(255,Number(o.x)||0)),y:Math.max(0,Math.min(255,Number(o.y)||0)),
+    text:String(o.text||"").slice(0,100),color:/^#[0-9a-fA-F]{6}$/.test(o.color||"")?o.color:"#55b6e8",
+    size:Math.max(2,Math.min(128,Number(o.size)||12))
+   }))};
+}
+let bcMap=(()=>{try{return bcMapSanitize(JSON.parse(localStorage.getItem(BC_MAP_KEY)||"{}"))}catch{return bcMapSanitize({})}})();
+function bcMapSave(){localStorage.setItem(BC_MAP_KEY,JSON.stringify(bcMap));schedulePartyPublish(true)}
+let bcMapMode="pin",bcMapSelected=null;
+function bcMapInit(){
+ const style=document.createElement("style");style.textContent=`
+ #bcMapPanel{display:none;background:#1c2229;border:1px solid #46505b;border-radius:12px;padding:12px;margin:12px 0}
+ #bcMapPanel.bc-show{display:block}#bcMapPanel .bc-map-tools{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin:9px 0}
+ #bcMapPanel input,#bcMapPanel select{padding:8px;background:#101820;color:white;border:1px solid #52606a;border-radius:6px}
+ #bcMapSvg{width:100%;max-height:70vh;aspect-ratio:1;touch-action:none;background:#202c35;border:1px solid #5c6670}
+ .bc-map-marker{cursor:move}.bc-map-selected{stroke:#fff;stroke-width:1.5}
+ `;document.head.append(style);
+ const launch=button("🗺 MAP","",()=>{const panel=document.getElementById("bcMapPanel");panel.classList.toggle("bc-show");bcMapDraw()});
+ document.querySelector("header .header-buttons")?.append(launch);
+ const panel=document.createElement("section");panel.id="bcMapPanel";
+ panel.innerHTML=`<h2>TACTICAL MAP · 256 × 256</h2><div class="sub">DM editor · select a tool then click the map; select a marker to move or delete it</div>
+ <div class="bc-map-tools"><select id="bcMapTool"><option value="pin">📍 Pin</option><option value="text">Text</option><option value="icon">Icon</option><option value="rect">Square</option><option value="circle">Circle</option><option value="select">Move / Select</option></select>
+ <input id="bcMapText" placeholder="Label / emoji" value="📍" maxlength="100" aria-label="Marker label">
+ <label>Colour <input id="bcMapColor" type="color" value="#55b6e8"></label>
+ <label>Size <input id="bcMapSize" type="number" min="2" max="128" value="12" style="width:65px"></label>
+ <button id="bcMapDelete">DELETE SELECTED</button><button id="bcMapClear">CLEAR MAP</button></div>
+ <svg id="bcMapSvg" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" aria-label="Editable tactical map"></svg>
+ <div class="sub" id="bcMapCoords">Select a tool to add objects. Select mode to reposition.</div>`;
+ document.querySelector("main").prepend(panel);
+ document.getElementById("bcMapTool").onchange=e=>{bcMapMode=e.target.value;bcMapSelected=null;bcMapDraw()};
+ document.getElementById("bcMapDelete").onclick=()=>{if(bcMapSelected){bcMap.objects=bcMap.objects.filter(o=>o.id!==bcMapSelected);bcMapSelected=null;bcMapSave();bcMapDraw()}};
+ document.getElementById("bcMapClear").onclick=()=>{if(confirm("Clear all tactical map objects?")){bcMap.objects=[];bcMapSelected=null;bcMapSave();bcMapDraw()}};
+ const svg=document.getElementById("bcMapSvg");
+ let dragging=false;
+ function coords(ev){const r=svg.getBoundingClientRect();return{x:Math.max(0,Math.min(255,(ev.clientX-r.left)/r.width*256)),y:Math.max(0,Math.min(255,(ev.clientY-r.top)/r.height*256))}}
+ svg.addEventListener("pointerdown",ev=>{
+  const point=coords(ev),target=ev.target.closest("[data-map-id]"),id=target?.getAttribute("data-map-id");
+  if(id){bcMapSelected=id;dragging=true;svg.setPointerCapture(ev.pointerId);bcMapDraw();return}
+  if(bcMapMode==="select")return;
+  const o={id:uid(),kind:bcMapMode,x:Math.round(point.x),y:Math.round(point.y),
+   text:document.getElementById("bcMapText").value||"📍",
+   color:document.getElementById("bcMapColor").value,size:Number(document.getElementById("bcMapSize").value)||12};
+  bcMap.objects.push(o);bcMapSelected=o.id;bcMapSave();bcMapDraw()
+ });
+ svg.addEventListener("pointermove",ev=>{if(!dragging||!bcMapSelected)return;const o=bcMap.objects.find(x=>x.id===bcMapSelected);if(!o)return;const p=coords(ev);o.x=Math.round(p.x);o.y=Math.round(p.y);bcMapDraw()});
+ function endDrag(){if(dragging){dragging=false;bcMapSave()}}
+ svg.addEventListener("pointerup",endDrag);svg.addEventListener("pointercancel",endDrag);
+ bcMapDraw();
+}
+function bcMapDraw(){
+ const svg=document.getElementById("bcMapSvg");if(!svg)return;
+ const ns="http://www.w3.org/2000/svg";
+ const add=(parent,tag,attrs)=>{const e=document.createElementNS(ns,tag);for(const [k,v]of Object.entries(attrs))e.setAttribute(k,String(v));parent.append(e);return e};
+ svg.replaceChildren();add(svg,"rect",{x:0,y:0,width:256,height:256,fill:bcMap.background});
+ for(let n=0;n<=256;n+=16){add(svg,"path",{d:`M${n} 0V256 M0 ${n}H256`,stroke:"#ffffff", "stroke-opacity":".11","stroke-width":".4","pointer-events":"none"})}
+ for(const o of bcMap.objects){
+  const g=add(svg,"g",{"data-map-id":o.id,class:"bc-map-marker"});
+  const sel=o.id===bcMapSelected;
+  if(o.kind==="rect")add(g,"rect",{x:o.x,y:o.y,width:o.size,height:o.size,fill:o.color,opacity:".65",stroke:sel?"white":"none","stroke-width":1.5});
+  else if(o.kind==="circle")add(g,"circle",{cx:o.x,cy:o.y,r:o.size/2,fill:o.color,opacity:".7",stroke:sel?"white":"none","stroke-width":1.5});
+  else {
+   if(o.kind==="pin")add(g,"circle",{cx:o.x,cy:o.y,r:Math.max(4,o.size/2),fill:o.color,stroke:sel?"white":"#101820","stroke-width":sel?1.5:.7});
+   const t=add(g,"text",{x:o.x,y:o.y+(o.kind==="pin"?2:0),fill:o.kind==="pin"?"#ffffff":o.color,
+     "font-size":o.kind==="text"?o.size:Math.max(6,o.size),"font-weight":"bold","text-anchor":"middle","dominant-baseline":"middle","pointer-events":"none"});
+   t.textContent=o.text;
+   if(sel)add(g,"circle",{cx:o.x,cy:o.y,r:Math.max(5,o.size/2+3),fill:"none",stroke:"white","stroke-width":".8","pointer-events":"none"});
+  }
+ }
+}
+
 function publicSnapshot(){
  const now=Date.now();
  return{
@@ -591,20 +668,14 @@ function publicSnapshot(){
    effects:(t.effects||[]).map(x=>({name:x.name,mode:x.mode,amount:Number(x.amount)||0,remainingDuration:Number(x.remainingDuration??x.duration)||0}))
   })),
   entities:entities.filter(e=>e.visible!==false).map(e=>({
-   id:e.id,name:e.name,type:e.type,quantity:Math.max(1,Number(e.quantity)||1),mobHP:Array.isArray(e.mobHP)?e.mobHP:[],mobHPMax:Number(e.mobHPMax)||0,engagedWith:e.engagedWith||"",initiative:e.initiative?{interval:e.initiative.interval,remaining:initiativeEffective(e,now),running:e.initiative.running}:null,
-   components:(e.components||[]).map(c=>({
-    id:c.id,name:c.name,kind:c.kind,
-    value:c.kind==="timer"?compEffective(c,now):c.value,
-    max:c.kind==="resource"?c.max:undefined,running:c.kind==="timer"?!!c.running:undefined,
-    rate:c.kind==="timer"?1:undefined
-   })),
-   effects:(e.effects||[]).map(x=>({name:x.name,mode:x.mode,amount:Number(x.amount)||0,remainingDuration:Number(x.remainingDuration??x.duration)||0}))
+   id:e.id,name:e.name,type:e.type,quantity:Math.max(1,Number(e.quantity)||1),engagedWith:e.engagedWith||"",initiative:e.initiative?{interval:e.initiative.interval,remaining:initiativeEffective(e,now),running:e.initiative.running}:null,
+
   })),
   timeline:timeline.filter(x=>x.public!==false).map(x=>({
    id:x.id,name:x.name,entityId:x.entityId||"",remaining:timelineEffective(x,now),
    running:!!x.running,repeat:!!x.repeat,interval:Number(x.interval)||0,due:timelineEffective(x,now)<=0
   })),
-  globalPaused,playersRunning,eventsRunning
+  map:bcMap,globalPaused,playersRunning,eventsRunning
  }
 }
 function setPartyStatus(text,cls=""){const el=document.getElementById("partyStatus");if(!el)return;el.textContent=text;el.className="party-status"+(cls?" "+cls:"")}
@@ -634,7 +705,14 @@ async function restorePartySession(){
 function uid(){return (globalThis.crypto&&crypto.randomUUID)?crypto.randomUUID():String(Date.now()+Math.random())}
 function makeTimer(name,primary=false){return{id:uid(),name,primary,color:"#43d17a",remaining:game.defaultSeconds,running:false,startedAt:null,startRemaining:null,zeroNotified:false,turnState:"active",playerActions:[],stats:{STR:10,DEX:10,CON:10,INT:10,WIS:10,CHA:10,AC:10,bonusSTR:0,bonusDEX:0,bonusCON:0,bonusINT:0,bonusWIS:0,bonusCHA:0},effects:[]}}
 function effectApplies(t,x){const c=x.condition||"always";return c==="always"||c===(t.turnState||"active")}
-function timeRate(t){return Math.max(0,(t.effects||[]).filter(x=>x.mode==="rate").reduce((v,x)=>v+(Number(x.amount)||0),1))}
+function timeRate(t){
+ // Rate modifiers are conditional: passive effects only apply off-turn.
+ const inCombat=bc09.running||bc09.lapElapsed>0||bc09.round>1;
+ const state=inCombat?(bc09.active===t.id?"active":"passive"):(t.turnState||"active");
+ const base=state==="passive"?0.10:1;
+ return Math.max(0,(t.effects||[]).filter(x=>x.mode==="rate"&&((x.condition||"always")==="always"||(x.condition||"always")===state))
+   .reduce((v,x)=>v+(Number(x.amount)||0),base));
+}
 function toggleTurnState(t,state=null){
  const was=t.running;if(was)freeze(t);t.turnState=state||(t.turnState==="active"?"passive":"active");
  if(was&&t.remaining>0&&playersRunning){t.running=true;t.startedAt=Date.now();t.startRemaining=t.remaining}
@@ -855,12 +933,12 @@ function exportSave(){
  const savedTimers=timers.map(t=>{const x=JSON.parse(JSON.stringify(t));x.remaining=effective(t,now);x.running=false;x.startedAt=null;x.startRemaining=null;return x});
  const savedTimeline=timeline.map(t=>{const x=JSON.parse(JSON.stringify(t));x.remaining=timelineEffective(t,now);x.running=false;x.startedAt=null;x.startRemaining=null;return x});
  const savedEntities=JSON.parse(JSON.stringify(entities));savedEntities.forEach(e=>{(e.components||[]).forEach(c=>{if(c.kind==="timer"){const live=entities.find(z=>z.id===e.id)?.components?.find(z=>z.id===c.id);if(live){c.value=compEffective(live,now);c.running=false;c.startedAt=null;c.startValue=null}}});if(e.initiative?.interval){const live=entities.find(z=>z.id===e.id);e.initiative.remaining=initiativeEffective(live,now);e.initiative.running=false;e.initiative.startedAt=null;e.initiative.startRemaining=null}});
- const payload={format:"BattleClockSave",version:"0.8.3",exportedAt:new Date().toISOString(),game,timers:savedTimers,entities:savedEntities,creatureBank,v081Banks,v081Notes,v08,timeline:savedTimeline,events};
+ const payload={format:"BattleClockSave",version:"0.8.3",exportedAt:new Date().toISOString(),game,timers:savedTimers,entities:savedEntities,creatureBank,v081Banks,v081Notes,v08,timeline:savedTimeline,events,map:bcMap};
  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`BattleClock-save-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast("BattleClock save exported.")
 }
 function importSaveFile(file){
  const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(d.format!=="BattleClockSave")throw new Error("Not a BattleClock save file");if(!confirm("Replace the current BattleClock state with this save?"))return;
- game=d.game||game;timers=Array.isArray(d.timers)?d.timers:timers;entities=Array.isArray(d.entities)?d.entities:entities;creatureBank=Array.isArray(d.creatureBank)?d.creatureBank:creatureBank;saveCreatureBank();if(d.v081Banks)v081Banks=d.v081Banks;if(Array.isArray(d.v081Notes)&&d.v081Notes.length){v081Notes=d.v081Notes;v081NoteActive=v081Notes[0].id}if(d.v08)v08=d.v08;v081Persist();saveV08();timeline=Array.isArray(d.timeline)?d.timeline:timeline;events=Array.isArray(d.events)?d.events:events;
+ if(d.map){bcMap=bcMapSanitize(d.map);bcMapSave()}game=d.game||game;timers=Array.isArray(d.timers)?d.timers:timers;entities=Array.isArray(d.entities)?d.entities:entities;creatureBank=Array.isArray(d.creatureBank)?d.creatureBank:creatureBank;saveCreatureBank();if(d.v081Banks)v081Banks=d.v081Banks;if(Array.isArray(d.v081Notes)&&d.v081Notes.length){v081Notes=d.v081Notes;v081NoteActive=v081Notes[0].id}if(d.v08)v08=d.v08;v081Persist();saveV08();timeline=Array.isArray(d.timeline)?d.timeline:timeline;events=Array.isArray(d.events)?d.events:events;
  timers.forEach(t=>{t.running=false;t.startedAt=null;t.startRemaining=null});timeline.forEach(x=>{x.running=false;x.startedAt=null;x.startRemaining=null});saveAll();render();renderTimeline();toast("BattleClock save imported.")
  }catch(e){alert("Could not import save: "+e.message)}};rd.readAsText(file)
 }
@@ -1065,8 +1143,8 @@ function bc09Sync(){const ids=bc09Entries().map(x=>x.id);bc09.order=bc09.order.f
 function bc09Lap(now=Date.now()){return Math.min(120,Math.max(0,Number(bc09.lapElapsed)||0)+(bc09.running&&bc09.lapStart?Math.max(0,(now-bc09.lapStart)/1000):0))}
 function bc09ActivePlayer(){return timers.find(t=>t.id===bc09.active)||null}
 function bc09Freeze(auto=false){if(bc09.running){bc09.lapElapsed=bc09Lap();bc09.running=false;bc09.lapStart=null}bc09.autoPaused=auto;bc09Save()}
-function bc09Advance(){bc09Sync();if(!bc09.order.length)return;const i=bc09.order.indexOf(bc09.active);const j=(i+1)%bc09.order.length;if(j===0)bc09.round++;bc09.active=bc09.order[j];bc09.lapElapsed=0;bc09.lapStart=null;bc09.running=false;bc09.autoPaused=false;bc09.expanded=[bc09.active];bc09Save();saveAll();render()}
-function bc09SetActive(id){bc09.active=id;bc09.lapElapsed=0;bc09.lapStart=null;bc09.running=false;bc09.autoPaused=false;bc09.expanded=[id];bc09Save();render()}
+function bc09Advance(){timers.forEach(t=>{if(t.running){freeze(t);t.running=t.remaining>0;t.startedAt=t.running?Date.now():null;t.startRemaining=t.running?t.remaining:null}});bc09Sync();if(!bc09.order.length)return;const i=bc09.order.indexOf(bc09.active);const j=(i+1)%bc09.order.length;if(j===0)bc09.round++;bc09.active=bc09.order[j];bc09.lapElapsed=0;bc09.lapStart=null;bc09.running=false;bc09.autoPaused=false;bc09.expanded=[bc09.active];bc09Save();saveAll();render()}
+function bc09SetActive(id){timers.forEach(t=>{if(t.running){freeze(t);t.running=t.remaining>0;t.startedAt=t.running?Date.now():null;t.startRemaining=t.running?t.remaining:null}});bc09.active=id;bc09.lapElapsed=0;bc09.lapStart=null;bc09.running=false;bc09.autoPaused=false;bc09.expanded=[id];bc09Save();render()}
 function bc09Pause(){
  if(bc09.running){bc09Freeze(false)}else{
   const player=bc09ActivePlayer();
@@ -1103,13 +1181,13 @@ function bc09RenderInitiative(){bc09Sync();const root=document.getElementById("b
  const progress=document.createElement("div");progress.id="bc095LapProgress";bar.append(progress);root.append(bar);
  if(bc09.autoPaused){const msg=document.createElement("div");msg.className="sub";msg.textContent="AUTO-PAUSED: active player's clock stopped";root.append(msg)}
  bc09UpdateLap();}
-function bc09PartyCommand(t,cmd){if(cmd==="lap-toggle"){bc09Pause()}else if(cmd==="hold"||cmd==="join"){/* legacy commands ignored */}schedulePartyPublish(true)}
+function bc09PartyCommand(t,cmd){if(cmd==="lap-toggle"){bc09Pause()}else if(cmd==="normal-toggle"){setPlayersRunning(!playersRunning)}else if(cmd==="hold"||cmd==="join"){/* legacy commands ignored */}schedulePartyPublish(true)}
 const bc09OriginalRefresh=refreshLiveDisplays;
 refreshLiveDisplays=function(now=Date.now()){bc09OriginalRefresh(now);document.querySelectorAll("[data-bc09-player-clock]").forEach(el=>{const t=timers.find(x=>x.id===el.dataset.bc09PlayerClock);if(t)el.textContent=`AC ${t.stats?.AC??10} · ${format(effective(t,now))}`})};
 
 setInterval(()=>{const now=Date.now();gameLogicTick(now);refreshLiveDisplays(now)},200);
 setInterval(saveAll,2000);window.addEventListener("beforeunload",()=>{saveAll();v081Persist()});
-try{render();renderTimeline();updateGroupButtons()}catch(err){
+try{render();renderTimeline();updateGroupButtons();bcMapInit()}catch(err){
  console.error("BattleClock startup failed",err);
  const p=document.getElementById("players");
  if(p)p.innerHTML=`<article class="timer zero"><div class="name">BattleClock startup error</div><div class="hint">${String(err.message||err)}</div></article>`;
